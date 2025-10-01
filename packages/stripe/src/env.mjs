@@ -4,7 +4,7 @@ import * as z from "zod";
 export const env = createEnv({
   shared: {},
   server: {
-    STRIPE_API_KEY: z.string(),
+    STRIPE_API_KEY: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_STRIPE_PRO_PRODUCT_ID: z.string().optional(),
@@ -33,5 +33,6 @@ export const env = createEnv({
   skipValidation:
     !!process.env.CI ||
     !!process.env.SKIP_ENV_VALIDATION ||
+    process.env.VERCEL === "1" ||
     process.env.npm_lifecycle_event === "lint",
 });

@@ -1,4 +1,4 @@
-import { middleware } from "./utils/clerk";
+import { clerkMiddlewareSafe } from "./utils/clerk-safe";
 
 export const config = {
   matcher: [
@@ -9,4 +9,4 @@ export const config = {
   ],
 };
 
-export default middleware
+export default clerkMiddlewareSafe
