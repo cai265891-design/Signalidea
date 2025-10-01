@@ -1,5 +1,8 @@
 {
   "github": {
     "silent": true
-  }
+  },
+  "buildCommand": "cd apps/nextjs && bun run build",
+  "installCommand": "bun install",
+  "outputDirectory": "apps/nextjs/.next"
 }
