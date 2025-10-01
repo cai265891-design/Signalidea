@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "contentlayer2 build && bun with-env next build",
+    "build:vercel": "contentlayer2 build && next build",
     "clean": "git clean -xdf .next .turbo node_modules",
     "dev": "bun with-env next dev",
     "lint": " bun with-env next lint --quiet",
