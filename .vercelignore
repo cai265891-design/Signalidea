@@ -1,1 +1,5 @@
 apps/auth-proxy
+.vercel
+.turbo
+.nitro
+**/node_modules

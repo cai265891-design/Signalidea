@@ -14,8 +14,8 @@ process.env.CLERK_SECRET_KEY =
 
 process.env.NEXT_PUBLIC_APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ||
-  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
-  'https://example.vercel.app';
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
+  'https://example.vercel.app');
 
 // Other defaults to prevent validation errors
 process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'build-time-secret';
@@ -28,14 +28,42 @@ process.env.RESEND_API_KEY = process.env.RESEND_API_KEY || 're_placeholder';
 process.env.RESEND_FROM = process.env.RESEND_FROM || 'noreply@example.com';
 
 console.log('Building with environment variables set...');
+console.log('Current directory:', process.cwd());
 console.log('CI:', process.env.CI);
 console.log('NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL);
 
 // Run the build
 const { execSync } = require('child_process');
+const path = require('path');
+const fs = require('fs');
 
 try {
-  process.chdir('apps/nextjs');
+  // Find the correct nextjs directory
+  let nextjsPath = 'apps/nextjs';
+
+  // Check if we're already in a subdirectory
+  if (fs.existsSync('package.json')) {
+    const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+    if (pkg.name === '@saasfly/nextjs') {
+      // We're already in the nextjs directory
+      nextjsPath = '.';
+    }
+  }
+
+  // Check if apps/nextjs exists from current location
+  if (!fs.existsSync(nextjsPath)) {
+    // Try to find it from parent directories
+    if (fs.existsSync('../nextjs')) {
+      nextjsPath = '../nextjs';
+    } else if (fs.existsSync('../../apps/nextjs')) {
+      nextjsPath = '../../apps/nextjs';
+    }
+  }
+
+  console.log('Changing to directory:', nextjsPath);
+  process.chdir(nextjsPath);
+
+  console.log('Running build in:', process.cwd());
   execSync('bun run build:vercel', { stdio: 'inherit' });
   console.log('Build completed successfully!');
 } catch (error) {
