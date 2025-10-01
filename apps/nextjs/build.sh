@@ -1,0 +1,6 @@
+#!/bin/bash
+export CI=1
+export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY='pk_test_aHVtYmxlLXRyb2xsLTMxLmNsZXJrLmFjY291bnRzLmRldiQ'
+export CLERK_SECRET_KEY='sk_test_6wqbPofYobmQc3FWEzgETz6WJvIR43BEQEHaYbRMf4'
+export NEXT_PUBLIC_APP_URL='https://example.vercel.app'
+bun run build:vercel
