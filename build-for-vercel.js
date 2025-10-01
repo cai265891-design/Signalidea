@@ -38,32 +38,64 @@ const path = require('path');
 const fs = require('fs');
 
 try {
-  // Find the correct nextjs directory
-  let nextjsPath = 'apps/nextjs';
+  // Debug: Show current directory structure
+  console.log('Current working directory:', process.cwd());
+  console.log('Directory contents:', fs.readdirSync('.'));
 
-  // Check if we're already in a subdirectory
+  // Find the correct nextjs directory
+  let nextjsPath = null;
+
+  // Possible paths to check
+  const possiblePaths = [
+    'apps/nextjs',           // From repo root
+    'nextjs',                // From apps directory
+    '../nextjs',             // From sibling directory
+    '.',                     // Current directory if already in nextjs
+    '../../apps/nextjs',     // From deep subdirectory
+    '../apps/nextjs'         // From subdirectory
+  ];
+
+  // Check if we're already in the nextjs directory
   if (fs.existsSync('package.json')) {
     const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
     if (pkg.name === '@saasfly/nextjs') {
-      // We're already in the nextjs directory
       nextjsPath = '.';
+      console.log('Already in nextjs directory');
     }
   }
 
-  // Check if apps/nextjs exists from current location
-  if (!fs.existsSync(nextjsPath)) {
-    // Try to find it from parent directories
-    if (fs.existsSync('../nextjs')) {
-      nextjsPath = '../nextjs';
-    } else if (fs.existsSync('../../apps/nextjs')) {
-      nextjsPath = '../../apps/nextjs';
+  // If not, search for the nextjs directory
+  if (!nextjsPath) {
+    for (const testPath of possiblePaths) {
+      const packagePath = path.join(testPath, 'package.json');
+      if (fs.existsSync(packagePath)) {
+        try {
+          const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+          if (pkg.name === '@saasfly/nextjs') {
+            nextjsPath = testPath;
+            console.log(`Found nextjs at: ${testPath}`);
+            break;
+          }
+        } catch (e) {
+          // Continue searching
+        }
+      }
     }
+  }
+
+  if (!nextjsPath) {
+    console.error('ERROR: Could not find the nextjs application directory!');
+    console.error('Searched paths:', possiblePaths);
+    process.exit(1);
   }
 
   console.log('Changing to directory:', nextjsPath);
   process.chdir(nextjsPath);
 
   console.log('Running build in:', process.cwd());
+  console.log('Directory contents after change:', fs.readdirSync('.'));
+
+  // Run the build
   execSync('bun run build:vercel', { stdio: 'inherit' });
   console.log('Build completed successfully!');
 } catch (error) {
