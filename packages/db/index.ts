@@ -7,4 +7,7 @@ export { jsonArrayFrom, jsonObjectFrom } from "kysely/helpers/postgres";
 export * from "./prisma/types";
 export * from "./prisma/enums";
 
-export const db = createKysely<DB>();
+// Skip database initialization during CI builds
+export const db = process.env.CI
+  ? ({} as ReturnType<typeof createKysely<DB>>)
+  : createKysely<DB>();

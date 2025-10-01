@@ -3,7 +3,8 @@
     "allow": [
       "Bash(cat:*)",
       "Bash(bun install:*)",
-      "Bash(bun run:*)"
+      "Bash(bun run:*)",
+      "Bash(CI=1 bun run build)"
     ],
     "deny": [],
     "ask": []

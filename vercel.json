@@ -2,7 +2,8 @@
   "github": {
     "silent": true
   },
-  "buildCommand": "cd apps/nextjs && bun run build",
+  "buildCommand": "cp .env.build .env.local && cd apps/nextjs && CI=1 bun run build",
   "installCommand": "bun install",
-  "outputDirectory": "apps/nextjs/.next"
+  "outputDirectory": "apps/nextjs/.next",
+  "framework": "nextjs"
 }

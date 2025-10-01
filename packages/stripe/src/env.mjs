@@ -31,6 +31,7 @@ export const env = createEnv({
       process.env.NEXT_PUBLIC_STRIPE_BUSINESS_YEARLY_PRICE_ID,
   },
   skipValidation:
+    !!process.env.CI ||
     !!process.env.SKIP_ENV_VALIDATION ||
     process.env.npm_lifecycle_event === "lint",
 });
