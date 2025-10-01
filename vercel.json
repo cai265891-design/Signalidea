@@ -2,7 +2,7 @@
   "github": {
     "silent": true
   },
-  "buildCommand": "cd apps/nextjs && CI=1 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_aHVtYmxlLXRyb2xsLTMxLmNsZXJrLmFjY291bnRzLmRldiQ CLERK_SECRET_KEY=sk_test_6wqbPofYobmQc3FWEzgETz6WJvIR43BEQEHaYbRMf4 NEXT_PUBLIC_APP_URL=https://example.vercel.app bun run build:vercel",
+  "buildCommand": "node build-for-vercel.js",
   "installCommand": "bun install",
   "outputDirectory": "apps/nextjs/.next",
   "framework": "nextjs"
