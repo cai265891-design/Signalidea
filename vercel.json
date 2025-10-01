@@ -2,8 +2,9 @@
   "github": {
     "silent": true
   },
-  "buildCommand": "test -f build-for-vercel.js && node build-for-vercel.js || (cd ../.. && node build-for-vercel.js)",
+  "buildCommand": "node build-for-vercel.js",
   "installCommand": "bun install",
   "outputDirectory": "apps/nextjs/.next",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "rootDirectory": ""
 }
