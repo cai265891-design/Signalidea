@@ -9,7 +9,10 @@
       "Bash(CI=1 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_aHVtYmxlLXRyb2xsLTMxLmNsZXJrLmFjY291bnRzLmRldiQ CLERK_SECRET_KEY=sk_test_6wqbPofYobmQc3FWEzgETz6WJvIR43BEQEHaYbRMf4 bun run build:vercel)",
       "Bash(bash:*)",
       "Bash(CI=1 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=\"pk_test_aHVtYmxlLXRyb2xsLTMxLmNsZXJrLmFjY291bnRzLmRldiQ\" CLERK_SECRET_KEY=\"sk_test_6wqbPofYobmQc3FWEzgETz6WJvIR43BEQEHaYbRMf4\" bun run build:vercel)",
-      "Bash(node build-for-vercel.js)"
+      "Bash(node build-for-vercel.js)",
+      "Bash(export CI=1)",
+      "Bash(export:*)",
+      "Bash(export CLERK_SECRET_KEY='sk_test_6wqbPofYobmQc3FWEzgETz6WJvIR43BEQEHaYbRMf4')"
     ],
     "deny": [],
     "ask": []
