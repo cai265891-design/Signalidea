@@ -1,5 +1,7 @@
-apps/auth-proxy
+apps/auth-proxy/**
 .vercel
 .turbo
 .nitro
 **/node_modules
+**/.turbo
+**/.nitro
