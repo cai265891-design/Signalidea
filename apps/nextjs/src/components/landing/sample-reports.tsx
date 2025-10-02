@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@saasfly/ui/button";
 import * as Icons from "@saasfly/ui/icons";
+import { Link, Download } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -140,7 +141,7 @@ export function SampleReports() {
                   <div className="space-y-2">
                     {report.redditPosts.map((post, idx) => (
                       <div key={idx} className="flex items-start gap-2 text-sm">
-                        <Icons.Link className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400" />
+                        <Link className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400" />
                         <span className="line-clamp-1 text-gray-700 dark:text-gray-300">
                           {post.title}
                         </span>
@@ -174,11 +175,11 @@ export function SampleReports() {
           </div>
           <div className="mt-6 flex gap-4">
             <Button disabled className="bg-gray-300 text-gray-500 cursor-not-allowed">
-              <Icons.Download className="mr-2 h-4 w-4" />
+              <Download className="mr-2 h-4 w-4" />
               Export PDF (Login required)
             </Button>
             <Button disabled className="bg-gray-300 text-gray-500 cursor-not-allowed">
-              <Icons.FileText className="mr-2 h-4 w-4" />
+              <Icons.Post className="mr-2 h-4 w-4" />
               Export HTML (Login required)
             </Button>
           </div>

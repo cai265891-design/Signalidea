@@ -1,6 +1,7 @@
 "use client";
 
 import * as Icons from "@saasfly/ui/icons";
+import { MessageSquare, CheckCircle } from "lucide-react";
 
 interface Step {
   id: number;
@@ -15,14 +16,14 @@ const steps: Step[] = [
     id: 1,
     title: "Understand intent",
     description: "Describe your research question in plain language—we parse the competitive landscape.",
-    icon: Icons.MessageSquare,
+    icon: MessageSquare,
     badge: "Free",
   },
   {
     id: 2,
     title: "Approve Top-5",
     description: "Review and adjust the AI-suggested shortlist before diving deeper.",
-    icon: Icons.CheckCircle,
+    icon: CheckCircle,
     badge: "Free",
   },
   {
@@ -36,7 +37,7 @@ const steps: Step[] = [
     id: 4,
     title: "Assemble report",
     description: "Get a structured HTML/PDF report with citations and export options.",
-    icon: Icons.FileText,
+    icon: Icons.Post,
     badge: "Credits",
   },
 ];
