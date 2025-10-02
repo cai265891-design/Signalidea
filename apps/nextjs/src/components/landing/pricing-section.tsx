@@ -2,7 +2,6 @@
 
 import { Button } from "@saasfly/ui/button";
 import * as Icons from "@saasfly/ui/icons";
-import { Badge } from "@saasfly/ui/badge";
 
 interface PricingTier {
   id: string;
@@ -95,18 +94,18 @@ export function PricingSection() {
             {/* Ribbon */}
             {tier.ribbon && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <Badge className="bg-[#2D6BFF] text-white">
+                <span className="rounded-full bg-[#2D6BFF] px-3 py-1 text-xs font-semibold text-white">
                   {tier.ribbon}
-                </Badge>
+                </span>
               </div>
             )}
 
             {/* Popular Badge */}
             {tier.popular && (
               <div className="absolute -top-3 right-4">
-                <Badge className="bg-[#2D6BFF] text-white">
+                <span className="rounded-full bg-[#2D6BFF] px-3 py-1 text-xs font-semibold text-white">
                   Most popular
-                </Badge>
+                </span>
               </div>
             )}
 

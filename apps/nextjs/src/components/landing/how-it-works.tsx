@@ -1,7 +1,6 @@
 "use client";
 
 import * as Icons from "@saasfly/ui/icons";
-import { Badge } from "@saasfly/ui/badge";
 
 interface Step {
   id: number;
@@ -64,16 +63,15 @@ export function HowItWorks() {
               className="relative rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
             >
               {/* Badge */}
-              <Badge
-                variant={step.badge === "Free" ? "secondary" : "default"}
+              <span
                 className={
                   step.badge === "Free"
-                    ? "absolute right-4 top-4 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                    : "absolute right-4 top-4 bg-[#2D6BFF] text-white"
+                    ? "absolute right-4 top-4 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    : "absolute right-4 top-4 rounded-full bg-[#2D6BFF] px-3 py-1 text-xs font-semibold text-white"
                 }
               >
                 {step.badge}
-              </Badge>
+              </span>
 
               {/* Icon */}
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[#2D6BFF]/10">
