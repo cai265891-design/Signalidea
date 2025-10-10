@@ -17,6 +17,10 @@ export const getMarketingConfig = async ({
         href: "https://libra.dev/",
       },
       {
+        title: dict.marketing.main_nav_demo,
+        href: `/demo/pipeline`,
+      },
+      {
         title: dict.marketing.main_nav_features,
         href: `/#features`,
       },

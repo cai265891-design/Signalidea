@@ -12,7 +12,8 @@
       "Bash(node build-for-vercel.js)",
       "Bash(export CI=1)",
       "Bash(export:*)",
-      "Bash(export CLERK_SECRET_KEY='sk_test_6wqbPofYobmQc3FWEzgETz6WJvIR43BEQEHaYbRMf4')"
+      "Bash(export CLERK_SECRET_KEY='sk_test_6wqbPofYobmQc3FWEzgETz6WJvIR43BEQEHaYbRMf4')",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

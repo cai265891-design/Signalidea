@@ -30,6 +30,7 @@
     "k8s_features": "Fast, simple development",
     "devops_features": "Easy application deployment",
     "price_features": "Economically efficient for production environments.",
+    "main_nav_demo": "Demo",
     "main_nav_features": "Features",
     "main_nav_pricing": "Pricing",
     "main_nav_products": "Products",
@@ -93,6 +94,7 @@
     "dashboard": {
       "main_nav_documentation": "Documentation",
       "main_nav_support": "Support",
+      "sidebar_nav_pipeline": "Pipeline",
       "sidebar_nav_clusters": "Clusters",
       "sidebar_nav_billing": "Billing",
       "sidebar_nav_settings": "Settings",

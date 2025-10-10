@@ -25,6 +25,11 @@ export const getDashboardConfig = async ({
     ],
     sidebarNav: [
       {
+        id: "pipeline",
+        title: dict.common.dashboard.sidebar_nav_pipeline,
+        href: "/pipeline",
+      },
+      {
         id: "clusters",
         title: dict.common.dashboard.sidebar_nav_clusters,
         href: "/dashboard/",

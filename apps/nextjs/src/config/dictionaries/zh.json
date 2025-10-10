@@ -30,6 +30,7 @@
     "k8s_features": "开发快速、简单",
     "devops_features": "应用轻松部署",
     "price_features": "经济高效为生产环境打造。",
+    "main_nav_demo": "演示",
     "main_nav_features": "特色",
     "main_nav_pricing": "价格",
     "main_nav_products": "产品",
@@ -93,6 +94,7 @@
     "dashboard": {
       "main_nav_documentation": "文档",
       "main_nav_support": "支持",
+      "sidebar_nav_pipeline": "分析流程",
       "sidebar_nav_clusters": "集群",
       "sidebar_nav_billing": "账单",
       "sidebar_nav_settings": "设置",

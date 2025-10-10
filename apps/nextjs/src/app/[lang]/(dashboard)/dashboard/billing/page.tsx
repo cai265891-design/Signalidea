@@ -1,92 +1,86 @@
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@saasfly/ui/card";
+"use client";
 
-import { DashboardShell } from "~/components/shell";
-import type { Locale } from "~/config/i18n-config";
-import { getDictionary } from "~/lib/get-dictionary";
-import { trpc } from "~/trpc/server";
-import { SubscriptionForm } from "./subscription-form";
+import { BillingPage } from "~/components/pipeline/billing-page";
 
-export const dynamic = "force-dynamic";
+const mockTransactions = [
+  {
+    id: "1",
+    date: "2024-01-15",
+    stage: "Evidence Pull",
+    credits: -18,
+    reason: "Deep analysis run",
+    type: "charge" as const,
+  },
+  {
+    id: "2",
+    date: "2024-01-14",
+    stage: "Matrix Forge",
+    credits: -16,
+    reason: "Feature comparison",
+    type: "charge" as const,
+  },
+  {
+    id: "3",
+    date: "2024-01-14",
+    stage: "Evidence Pull",
+    credits: 3,
+    reason: "Partial rollback - unused queries",
+    type: "refund" as const,
+  },
+  {
+    id: "4",
+    date: "2024-01-12",
+    stage: "Credit Purchase",
+    credits: 50,
+    reason: "Additional credits purchased",
+    type: "purchase" as const,
+  },
+  {
+    id: "5",
+    date: "2024-01-10",
+    stage: "Report Builder",
+    credits: -12,
+    reason: "PDF export",
+    type: "charge" as const,
+  },
+];
 
-export const metadata = {
-  title: "Billing",
-  description: "Manage billing and your subscription plan.",
-};
+const mockInvoices = [
+  {
+    id: "INV-2024-001",
+    date: "January 1, 2024",
+    amount: 99,
+    status: "paid" as const,
+    downloadUrl: "#",
+  },
+  {
+    id: "INV-2023-012",
+    date: "December 1, 2023",
+    amount: 99,
+    status: "paid" as const,
+    downloadUrl: "#",
+  },
+  {
+    id: "INV-2023-011",
+    date: "November 1, 2023",
+    amount: 99,
+    status: "paid" as const,
+    downloadUrl: "#",
+  },
+];
 
-interface Subscription {
-  plan: string | null;
-  endsAt: Date | null;
-}
-
-export default async function BillingPage({
-  params: { lang },
-}: {
-  params: {
-    lang: Locale;
-  };
-}) {
-  const dict = await getDictionary(lang);
+export default function Billing() {
   return (
-    <DashboardShell
-      title={dict.business.billing.billing}
-      description={dict.business.billing.content}
-      className="space-y-4"
-    >
-      <SubscriptionCard dict={dict.business.billing} />
-
-      <UsageCard />
-    </DashboardShell>
-  );
-}
-
-function generateSubscriptionMessage(
-  dict: Record<string, string>,
-  subscription: Subscription,
-): string {
-  const content = String(dict.subscriptionInfo);
-  if (subscription.plan && subscription.endsAt) {
-    return content
-      .replace("{plan}", subscription.plan)
-      .replace("{date}", subscription.endsAt.toLocaleDateString());
-  }
-  return "";
-}
-
-async function SubscriptionCard({ dict }: { dict: Record<string, string> }) {
-  const subscription = (await trpc.auth.mySubscription.query()) as Subscription;
-  const content = generateSubscriptionMessage(dict, subscription);
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Subscription</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {subscription ? (
-          <p dangerouslySetInnerHTML={{ __html: content }} />
-        ) : (
-          <p>{dict.noSubscription}</p>
-        )}
-      </CardContent>
-      <CardFooter>
-        <SubscriptionForm hasSubscription={!!subscription} dict={dict} />
-      </CardFooter>
-    </Card>
-  );
-}
-
-function UsageCard() {
-  return (
-    <Card className="mt-4">
-      <CardHeader>
-        <CardTitle>Usage</CardTitle>
-      </CardHeader>
-      <CardContent>None</CardContent>
-    </Card>
+    <BillingPage
+      currentPlan="Pro"
+      monthlyCredits={{ used: 32, total: 100 }}
+      transactions={mockTransactions}
+      invoices={mockInvoices}
+      hasFirstReportDiscount={false}
+      defaultCap={true}
+      onToggleDefaultCap={(enabled) => console.log("Toggle default cap:", enabled)}
+      onBuyCredits={() => console.log("Buy credits")}
+      onUpgradePlan={() => console.log("Upgrade plan")}
+    />
   );
 }
