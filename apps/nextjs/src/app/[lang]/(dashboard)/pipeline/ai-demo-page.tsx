@@ -4,7 +4,6 @@ import { useState } from "react";
 import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
 import { AIContentSection, AINumberedList, AIStreamingText } from "~/components/pipeline/ai-content-section";
-import { useToast } from "@saasfly/ui/use-toast";
 
 const mockHistory = [
   {
@@ -41,25 +40,17 @@ const analysisContent = [
   },
 ];
 
-export default function PipelinePage() {
+export default function AIDemoPipelinePage() {
   const [expandedStages, setExpandedStages] = useState<Record<string, boolean>>({
     intent: true,
     candidate: false,
   });
-  const { toast } = useToast();
-
-  const handleNewAction = () => {
-    toast({
-      title: "Starting new analysis",
-      description: "Your pipeline will begin processing shortly.",
-    });
-  };
 
   return (
     <AIPipelineLayout
       credits={68}
       history={mockHistory}
-      onNewAction={handleNewAction}
+      onNewAction={() => console.log("New action")}
     >
       <div className="max-w-5xl mx-auto p-8 space-y-4">
         {/* Intent Clarifier */}
