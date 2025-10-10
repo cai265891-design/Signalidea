@@ -133,6 +133,10 @@
     "./toaster": "./src/toaster.tsx",
     "./typewriter-effect": "./src/typewriter-effect.tsx",
     "./use-toast": "./src/use-toast.tsx",
-    "./wobble-card": "./src/wobble-card.tsx"
+    "./wobble-card": "./src/wobble-card.tsx",
+    "./badge": "./src/badge.tsx",
+    "./progress": "./src/progress.tsx",
+    "./textarea": "./src/textarea.tsx",
+    "./toast": "./src/toast.tsx"
   }
 }
