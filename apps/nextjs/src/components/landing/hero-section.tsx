@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { Button } from "@saasfly/ui/button";
 import * as Icons from "@saasfly/ui/icons";
 
@@ -21,17 +23,29 @@ const trustItems = [
 export function HeroSection() {
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { isSignedIn } = useAuth();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
 
     setIsLoading(true);
-    // Simulate progress
-    setTimeout(() => {
+
+    // Check if user is signed in
+    if (!isSignedIn) {
+      // Redirect to login with return URL to pipeline page
+      const locale = window.location.pathname.split('/')[1] || 'en';
+      router.push(`/${locale}/login-clerk?from=${encodeURIComponent(`/${locale}/pipeline`)}`);
       setIsLoading(false);
-      // Handle actual submission here
-      console.log("Submit query:", query);
+      return;
+    }
+
+    // If signed in, navigate to pipeline page
+    setTimeout(() => {
+      const locale = window.location.pathname.split('/')[1] || 'en';
+      router.push(`/${locale}/pipeline`);
+      setIsLoading(false);
     }, 300);
   };
 

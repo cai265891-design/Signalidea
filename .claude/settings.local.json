@@ -14,7 +14,8 @@
       "Bash(export:*)",
       "Bash(export CLERK_SECRET_KEY='sk_test_6wqbPofYobmQc3FWEzgETz6WJvIR43BEQEHaYbRMf4')",
       "Bash(find:*)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
