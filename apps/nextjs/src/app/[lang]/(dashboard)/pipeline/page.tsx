@@ -6,7 +6,6 @@ import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
 import { AIContentSection, AINumberedList, AIStreamingText } from "~/components/pipeline/ai-content-section";
 import { useToast } from "@saasfly/ui/use-toast";
-import { trpc } from "~/trpc/client";
 
 const mockHistory = [
   {
@@ -51,16 +50,49 @@ function PipelineContent() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
 
-  // Function to call n8n analysis using trpc client directly
+  // Function to call n8n analysis using direct fetch to tRPC endpoint
   const analyzeRequirement = async (input: string) => {
     try {
       setIsAnalyzing(true);
-      const data = await trpc.n8n.analyzeRequirement.mutate({ input });
-      setAnalysisData(data);
-      toast({
-        title: "Analysis completed",
-        description: "Requirement analysis has been completed successfully.",
+
+      // Call tRPC endpoint with batch format and query parameter
+      const batchInput = JSON.stringify({
+        0: {
+          json: { input },
+        },
       });
+
+      const response = await fetch(
+        `/api/trpc/edge/n8n.analyzeRequirement?batch=1&input=${encodeURIComponent(batchInput)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Response error:", errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      // tRPC batch response format: [{ result: { data: { json: actualData } } }]
+      if (result[0]?.result?.data?.json) {
+        const data = result[0].result.data.json;
+        setAnalysisData(data);
+        toast({
+          title: "Analysis completed",
+          description: "Requirement analysis has been completed successfully.",
+        });
+      } else if (result[0]?.error) {
+        throw new Error(result[0].error.json?.message || "tRPC error");
+      } else {
+        throw new Error("Unexpected response format");
+      }
     } catch (error) {
       console.error("Analysis error:", error);
       toast({
