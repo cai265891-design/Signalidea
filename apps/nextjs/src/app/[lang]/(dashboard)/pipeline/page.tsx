@@ -50,7 +50,7 @@ function PipelineContent() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
 
-  // Function to call n8n analysis using direct fetch to tRPC endpoint
+  // Call n8n analysis API using direct fetch to tRPC endpoint
   const analyzeRequirement = async (input: string) => {
     try {
       setIsAnalyzing(true);
