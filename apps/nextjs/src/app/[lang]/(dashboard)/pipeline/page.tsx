@@ -6,7 +6,7 @@ import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
 import { AIContentSection, AINumberedList, AIStreamingText } from "~/components/pipeline/ai-content-section";
 import { useToast } from "@saasfly/ui/use-toast";
-import { api } from "~/trpc/react";
+import { trpc } from "~/trpc/client";
 
 const mockHistory = [
   {
@@ -51,7 +51,7 @@ export default function PipelinePage() {
   const { toast } = useToast();
 
   // tRPC mutation to call n8n
-  const analyzeRequirement = api.n8n.analyzeRequirement.useMutation({
+  const analyzeRequirement = trpc.n8n.analyzeRequirement.useMutation({
     onSuccess: (data) => {
       setAnalysisData(data);
       toast({
