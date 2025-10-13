@@ -45,10 +45,10 @@ export function HeroSection() {
     }
     */
 
-    // Navigate to pipeline page directly (for testing)
+    // Navigate to pipeline page with query parameter
     setTimeout(() => {
       const locale = window.location.pathname.split('/')[1] || 'en';
-      router.push(`/${locale}/pipeline`);
+      router.push(`/${locale}/pipeline?query=${encodeURIComponent(query.trim())}`);
       setIsLoading(false);
     }, 300);
   };

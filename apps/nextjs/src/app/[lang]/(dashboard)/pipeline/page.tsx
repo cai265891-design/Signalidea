@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
 import { AIContentSection, AINumberedList, AIStreamingText } from "~/components/pipeline/ai-content-section";
@@ -37,12 +38,16 @@ interface N8NAnalysisData {
 }
 
 export default function PipelinePage() {
+  const searchParams = useSearchParams();
+  const queryFromUrl = searchParams.get("query");
+
   const [expandedStages, setExpandedStages] = useState<Record<string, boolean>>({
     intent: true,
     candidate: false,
   });
-  const [userInput, setUserInput] = useState("I want to build an AI image product");
+  const [userInput, setUserInput] = useState(queryFromUrl || "I want to build an AI image product");
   const [analysisData, setAnalysisData] = useState<N8NAnalysisData | null>(null);
+  const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
   const { toast } = useToast();
 
   // tRPC mutation to call n8n
@@ -62,6 +67,18 @@ export default function PipelinePage() {
       });
     },
   });
+
+  // Auto-trigger analysis when query is provided from URL
+  useEffect(() => {
+    if (queryFromUrl && !hasAutoTriggered && !analyzeRequirement.isPending) {
+      setHasAutoTriggered(true);
+      toast({
+        title: "Starting analysis",
+        description: "Your pipeline will begin processing shortly.",
+      });
+      analyzeRequirement.mutate({ input: queryFromUrl });
+    }
+  }, [queryFromUrl, hasAutoTriggered, analyzeRequirement.isPending]);
 
   const handleNewAction = () => {
     toast({
