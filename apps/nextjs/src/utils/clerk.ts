@@ -18,6 +18,7 @@ export const isPublicRoute = createRouteMatcher([
   new RegExp("/(\\w{2}/)?blog(.*)"),
   new RegExp("/(\\w{2}/)?pricing(.*)"),
   new RegExp("/(\\w{2}/)?demo/pipeline(.*)"), // demo pipeline page
+  new RegExp("/(\\w{2}/)?pipeline(.*)"), // TODO: Temporarily public for testing, remove when ready
   new RegExp("^/\\w{2}$"), // root with locale
 ])
 

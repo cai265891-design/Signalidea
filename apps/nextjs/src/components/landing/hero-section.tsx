@@ -32,6 +32,9 @@ export function HeroSection() {
 
     setIsLoading(true);
 
+    // TODO: Temporarily skip auth check for testing
+    // When ready to enable auth, uncomment the block below:
+    /*
     // Check if user is signed in
     if (!isSignedIn) {
       // Redirect to login with return URL to pipeline page
@@ -40,8 +43,9 @@ export function HeroSection() {
       setIsLoading(false);
       return;
     }
+    */
 
-    // If signed in, navigate to pipeline page
+    // Navigate to pipeline page directly (for testing)
     setTimeout(() => {
       const locale = window.location.pathname.split('/')[1] || 'en';
       router.push(`/${locale}/pipeline`);
