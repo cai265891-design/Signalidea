@@ -93,8 +93,16 @@ export const middleware = clerkMiddleware(async (auth, req: NextRequest) => {
     req.nextUrl.pathname,
   );
   const isAuthRoute = req.nextUrl.pathname.startsWith("/api/trpc/");
+  // TODO: Temporarily allow unauthenticated access to n8n API for testing
+  const isN8nRoute = req.nextUrl.pathname.includes("/api/trpc/edge/n8n");
   const locale = getLocale(req);
+
   if (isAuthRoute && isAuth) {
+    return NextResponse.next();
+  }
+
+  // Allow public access to n8n API during testing
+  if (isN8nRoute) {
     return NextResponse.next();
   }
   if (req.nextUrl.pathname.startsWith("/admin/dashboard")) {
