@@ -6,7 +6,7 @@ import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
 import { AIContentSection, AINumberedList, AIStreamingText } from "~/components/pipeline/ai-content-section";
 import { useToast } from "@saasfly/ui/use-toast";
-import { api } from "~/utils/api";
+import { trpc } from "~/trpc/client";
 
 const mockHistory = [
   {
@@ -48,30 +48,29 @@ function PipelineContent() {
   const [userInput, setUserInput] = useState("I want to build an AI image product");
   const [analysisData, setAnalysisData] = useState<N8NAnalysisData | null>(null);
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
 
-  // tRPC mutation hook
-  const mutation = api.n8n.analyzeRequirement.useMutation({
-    onSuccess: (data) => {
+  // Function to call n8n analysis using trpc client directly
+  const analyzeRequirement = async (input: string) => {
+    try {
+      setIsAnalyzing(true);
+      const data = await trpc.n8n.analyzeRequirement.mutate({ input });
       setAnalysisData(data);
       toast({
         title: "Analysis completed",
         description: "Requirement analysis has been completed successfully.",
       });
-    },
-    onError: (error) => {
+    } catch (error) {
       console.error("Analysis error:", error);
       toast({
         title: "Analysis failed",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
-    },
-  });
-
-  // Function to call n8n analysis
-  const analyzeRequirement = (input: string) => {
-    mutation.mutate({ input });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   // Auto-trigger analysis when query is provided from URL
@@ -107,16 +106,16 @@ function PipelineContent() {
         {/* Intent Clarifier */}
         <AIStageCard
           title="Intent Clarifier"
-          status={mutation.isPending ? "running" : analysisData ? "completed" : "pending"}
+          status={isAnalyzing ? "running" : analysisData ? "completed" : "pending"}
           badge="Free"
-          description={mutation.isPending ? "Analyzing requirement..." : undefined}
+          description={isAnalyzing ? "Analyzing requirement..." : undefined}
           isExpanded={expandedStages.intent}
           onToggle={() =>
             setExpandedStages({ ...expandedStages, intent: !expandedStages.intent })
           }
           content={
             <AIContentSection>
-              {mutation.isPending ? (
+              {isAnalyzing ? (
                 <AIStreamingText
                   text="Analyzing your requirement with AI..."
                   isStreaming={true}

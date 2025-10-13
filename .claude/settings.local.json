@@ -17,7 +17,9 @@
       "Bash(head:*)",
       "Bash(ls:*)",
       "Bash(bun tsc:*)",
-      "Bash(bun pm ls:*)"
+      "Bash(bun pm ls:*)",
+      "Bash(curl -X POST http://localhost:3001/api/trpc/edge/n8n.analyzeRequirement )",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []
