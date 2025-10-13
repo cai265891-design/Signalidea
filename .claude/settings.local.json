@@ -16,7 +16,8 @@
       "Bash(find:*)",
       "Bash(head:*)",
       "Bash(ls:*)",
-      "Bash(bun tsc:*)"
+      "Bash(bun tsc:*)",
+      "Bash(bun pm ls:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
 import { AIContentSection, AINumberedList, AIStreamingText } from "~/components/pipeline/ai-content-section";
 import { useToast } from "@saasfly/ui/use-toast";
-import { trpc } from "~/trpc/client";
+import { api } from "~/utils/api";
 
 const mockHistory = [
   {
@@ -50,8 +50,8 @@ function PipelineContent() {
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
   const { toast } = useToast();
 
-  // tRPC mutation to call n8n
-  const analyzeRequirement = trpc.n8n.analyzeRequirement.useMutation({
+  // tRPC mutation hook
+  const mutation = api.n8n.analyzeRequirement.useMutation({
     onSuccess: (data) => {
       setAnalysisData(data);
       toast({
@@ -60,6 +60,7 @@ function PipelineContent() {
       });
     },
     onError: (error) => {
+      console.error("Analysis error:", error);
       toast({
         title: "Analysis failed",
         description: error.message,
@@ -67,6 +68,11 @@ function PipelineContent() {
       });
     },
   });
+
+  // Function to call n8n analysis
+  const analyzeRequirement = (input: string) => {
+    mutation.mutate({ input });
+  };
 
   // Auto-trigger analysis when query is provided from URL
   useEffect(() => {
@@ -77,7 +83,7 @@ function PipelineContent() {
         title: "Starting analysis",
         description: "Your pipeline will begin processing shortly.",
       });
-      analyzeRequirement.mutate({ input: queryFromUrl });
+      analyzeRequirement(queryFromUrl);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryFromUrl]);
@@ -88,7 +94,7 @@ function PipelineContent() {
       description: "Your pipeline will begin processing shortly.",
     });
     // 调用 n8n 分析
-    analyzeRequirement.mutate({ input: userInput });
+    analyzeRequirement(userInput);
   };
 
   return (
@@ -101,16 +107,16 @@ function PipelineContent() {
         {/* Intent Clarifier */}
         <AIStageCard
           title="Intent Clarifier"
-          status={analyzeRequirement.isPending ? "running" : analysisData ? "completed" : "pending"}
+          status={mutation.isPending ? "running" : analysisData ? "completed" : "pending"}
           badge="Free"
-          description={analyzeRequirement.isPending ? "Analyzing requirement..." : undefined}
+          description={mutation.isPending ? "Analyzing requirement..." : undefined}
           isExpanded={expandedStages.intent}
           onToggle={() =>
             setExpandedStages({ ...expandedStages, intent: !expandedStages.intent })
           }
           content={
             <AIContentSection>
-              {analyzeRequirement.isPending ? (
+              {mutation.isPending ? (
                 <AIStreamingText
                   text="Analyzing your requirement with AI..."
                   isStreaming={true}
