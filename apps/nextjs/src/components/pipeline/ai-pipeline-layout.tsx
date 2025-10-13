@@ -44,7 +44,7 @@ export function AIPipelineLayout({
           {history.map((item) => (
             <Card
               key={item.id}
-              className="p-4 hover:shadow-md transition-shadow cursor-pointer border-gray-200"
+              className="p-4 hover:shadow-md transition-shadow cursor-pointer border-gray-200 bg-white"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
