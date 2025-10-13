@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
@@ -37,7 +37,7 @@ interface N8NAnalysisData {
   }>;
 }
 
-export default function PipelinePage() {
+function PipelineContent() {
   const searchParams = useSearchParams();
   const queryFromUrl = searchParams.get("query");
 
@@ -45,7 +45,7 @@ export default function PipelinePage() {
     intent: true,
     candidate: false,
   });
-  const [userInput, setUserInput] = useState(queryFromUrl || "I want to build an AI image product");
+  const [userInput, setUserInput] = useState("I want to build an AI image product");
   const [analysisData, setAnalysisData] = useState<N8NAnalysisData | null>(null);
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
   const { toast } = useToast();
@@ -70,15 +70,16 @@ export default function PipelinePage() {
 
   // Auto-trigger analysis when query is provided from URL
   useEffect(() => {
-    if (queryFromUrl && !hasAutoTriggered && !analyzeRequirement.isPending) {
+    if (queryFromUrl && !hasAutoTriggered) {
       setHasAutoTriggered(true);
+      setUserInput(queryFromUrl);
       toast({
         title: "Starting analysis",
         description: "Your pipeline will begin processing shortly.",
       });
       analyzeRequirement.mutate({ input: queryFromUrl });
     }
-  }, [queryFromUrl, hasAutoTriggered, analyzeRequirement.isPending]);
+  }, [queryFromUrl, hasAutoTriggered, toast]);
 
   const handleNewAction = () => {
     toast({
@@ -231,5 +232,20 @@ export default function PipelinePage() {
         />
       </div>
     </AIPipelineLayout>
+  );
+}
+
+export default function PipelinePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading pipeline...</p>
+        </div>
+      </div>
+    }>
+      <PipelineContent />
+    </Suspense>
   );
 }
