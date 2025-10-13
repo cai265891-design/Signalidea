@@ -55,20 +55,19 @@ function PipelineContent() {
     try {
       setIsAnalyzing(true);
 
-      // Call tRPC endpoint with batch format and query parameter
-      const batchInput = JSON.stringify({
-        0: {
-          json: { input },
-        },
-      });
-
+      // Call tRPC endpoint with batch format
       const response = await fetch(
-        `/api/trpc/edge/n8n.analyzeRequirement?batch=1&input=${encodeURIComponent(batchInput)}`,
+        `/api/trpc/edge/n8n.analyzeRequirement?batch=1`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
+          body: JSON.stringify({
+            0: {
+              json: { input },
+            },
+          }),
         }
       );
 
