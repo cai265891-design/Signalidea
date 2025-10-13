@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
@@ -79,7 +79,8 @@ function PipelineContent() {
       });
       analyzeRequirement.mutate({ input: queryFromUrl });
     }
-  }, [queryFromUrl, hasAutoTriggered, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryFromUrl]);
 
   const handleNewAction = () => {
     toast({

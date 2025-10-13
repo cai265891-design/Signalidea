@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { createTRPCRouter, procedure } from "../trpc";
 
 // n8n 返回数据的类型定义
 const N8NResponseSchema = z.object({
@@ -18,7 +18,8 @@ const N8NResponseSchema = z.object({
 });
 
 export const n8nRouter = createTRPCRouter({
-  analyzeRequirement: protectedProcedure
+  // TODO: Change to protectedProcedure when auth is enabled
+  analyzeRequirement: procedure
     .input(
       z.object({
         input: z.string(),
