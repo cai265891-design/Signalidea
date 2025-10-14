@@ -6,7 +6,6 @@ import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
 import { AIContentSection, AINumberedList, AIStreamingText } from "~/components/pipeline/ai-content-section";
 import { useToast } from "@saasfly/ui/use-toast";
-import { api } from "~/utils/api";
 
 const mockHistory = [
   {
@@ -48,26 +47,49 @@ function PipelineContent() {
   const [userInput, setUserInput] = useState("I want to build an AI image product");
   const [analysisData, setAnalysisData] = useState<N8NAnalysisData | null>(null);
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
-  const { toast } = useToast();
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { toast} = useToast();
 
-  // Use tRPC mutation hook
-  const { mutate: analyzeRequirement, isPending: isAnalyzing } = api.n8n.analyzeRequirement.useMutation({
-    onSuccess: (data) => {
+  // Call n8n analysis API using tRPC endpoint
+  const analyzeRequirement = async (input: string) => {
+    try {
+      setIsAnalyzing(true);
+
+      // Call tRPC mutation endpoint directly
+      const response = await fetch(
+        `/api/trpc/edge/n8n.analyzeRequirement`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ input }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Response error:", errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
       setAnalysisData(data);
       toast({
         title: "Analysis completed",
         description: "Requirement analysis has been completed successfully.",
       });
-    },
-    onError: (error) => {
+    } catch (error) {
       console.error("Analysis error:", error);
       toast({
         title: "Analysis failed",
-        description: error.message || "Unknown error",
+        description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
-    },
-  });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   // Auto-trigger analysis when query is provided from URL
   useEffect(() => {
@@ -78,7 +100,7 @@ function PipelineContent() {
         title: "Starting analysis",
         description: "Your pipeline will begin processing shortly.",
       });
-      analyzeRequirement({ input: queryFromUrl });
+      analyzeRequirement(queryFromUrl);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryFromUrl]);
@@ -89,7 +111,7 @@ function PipelineContent() {
       description: "Your pipeline will begin processing shortly.",
     });
     // 调用 n8n 分析
-    analyzeRequirement({ input: userInput });
+    analyzeRequirement(userInput);
   };
 
   return (
