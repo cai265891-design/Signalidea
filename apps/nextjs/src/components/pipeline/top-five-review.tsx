@@ -32,7 +32,7 @@ export function TopFiveReview({
 
   return (
     <StageCard
-      title="Top-5 Review"
+      title="Top-5 Selector"
       status="needs-approval"
       description="Drag to reorder or replace competitors before deep analysis"
       onPrimaryAction={onApprove}

@@ -43,7 +43,7 @@ export function MatrixForge({
 
   return (
     <StageCard
-      title="Matrix Forge"
+      title="Feature Matrix"
       status="approved"
       description="Features & Pricing comparison across Top-5 competitors"
     >

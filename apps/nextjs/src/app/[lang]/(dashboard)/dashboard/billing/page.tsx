@@ -14,7 +14,7 @@ const mockTransactions = [
   {
     id: "2",
     date: "2024-01-14",
-    stage: "Matrix Forge",
+    stage: "Feature Matrix",
     credits: -16,
     reason: "Feature comparison",
     type: "charge" as const,

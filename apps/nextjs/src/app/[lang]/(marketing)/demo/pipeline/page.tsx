@@ -122,7 +122,7 @@ export default function PipelineDemoPage() {
           />
 
           {/* Upcoming Stages */}
-          <AIStageCard title="Top-5 Review" status="pending" badge="Free" />
+          <AIStageCard title="Top-5 Selector" status="pending" badge="Free" />
 
           <AIStageCard
             title="Evidence Pull"
@@ -132,7 +132,7 @@ export default function PipelineDemoPage() {
           />
 
           <AIStageCard
-            title="Matrix Forge"
+            title="Feature Matrix"
             description="Feature comparison table"
             status="pending"
             badge="Credits"

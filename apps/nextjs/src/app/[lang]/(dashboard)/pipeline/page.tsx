@@ -206,8 +206,8 @@ function PipelineContent() {
         {/* Candidate Finder */}
         <AIStageCard
           title="Candidate Finder"
-          description="Running Analysis..."
-          status="running"
+          description={analysisData && !isAnalyzing ? "Running Analysis..." : undefined}
+          status={analysisData && !isAnalyzing ? "running" : "pending"}
           badge="Free"
           isExpanded={expandedStages.candidate}
           onToggle={() =>
@@ -217,17 +217,19 @@ function PipelineContent() {
             })
           }
           content={
-            <AIContentSection>
-              <AIStreamingText
-                text="Analyzing market competitors and similar solutions..."
-                isStreaming={true}
-              />
-            </AIContentSection>
+            analysisData && !isAnalyzing ? (
+              <AIContentSection>
+                <AIStreamingText
+                  text="Analyzing market competitors and similar solutions..."
+                  isStreaming={true}
+                />
+              </AIContentSection>
+            ) : undefined
           }
         />
 
         {/* Upcoming Stages */}
-        <AIStageCard title="Top-5 Review" status="pending" badge="Free" />
+        <AIStageCard title="Top-5 Selector" status="pending" badge="Free" />
 
         <AIStageCard
           title="Evidence Pull"
@@ -237,7 +239,7 @@ function PipelineContent() {
         />
 
         <AIStageCard
-          title="Matrix Forge"
+          title="Feature Matrix"
           description="Feature comparison table"
           status="pending"
           badge="Credits"
