@@ -44,34 +44,52 @@ export async function POST(request: NextRequest) {
     console.log("Calling N8N webhook:", N8N_WEBHOOK_URL);
     console.log("Request payload:", { input });
 
-    const response = await fetch(N8N_WEBHOOK_URL, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ input }),
-    });
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("n8n webhook error:", errorText);
-      return NextResponse.json(
-        { error: `n8n webhook failed: ${response.status} ${response.statusText}`, details: errorText },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    console.log("N8N response:", data);
-
-    // 验证返回数据结构
     try {
-      const validatedData = N8NResponseSchema.parse(data);
-      return NextResponse.json(validatedData);
-    } catch (validationError) {
-      console.error("Validation error:", validationError);
-      return NextResponse.json(
-        { error: "Invalid response format from N8N", data },
-        { status: 500 }
-      );
+      const response = await fetch(N8N_WEBHOOK_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ input }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("n8n webhook error:", errorText);
+        return NextResponse.json(
+          { error: `n8n webhook failed: ${response.status} ${response.statusText}`, details: errorText },
+          { status: response.status }
+        );
+      }
+
+      const data = await response.json();
+      console.log("N8N response:", data);
+
+      // 验证返回数据结构
+      try {
+        const validatedData = N8NResponseSchema.parse(data);
+        return NextResponse.json(validatedData);
+      } catch (validationError) {
+        console.error("Validation error:", validationError);
+        return NextResponse.json(
+          { error: "Invalid response format from N8N", data },
+          { status: 500 }
+        );
+      }
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        console.error("N8N request timed out");
+        return NextResponse.json(
+          { error: "N8N webhook request timed out after 60 seconds" },
+          { status: 504 }
+        );
+      }
+      throw fetchError;
     }
   } catch (error) {
     console.error("Error in N8N analyze route:", error);
