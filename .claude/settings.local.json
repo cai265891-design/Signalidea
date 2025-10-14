@@ -22,7 +22,8 @@
       "Bash(pkill:*)",
       "Read(//private/tmp/**)",
       "Bash(curl:*)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(bun with-env:*)"
     ],
     "deny": [],
     "ask": []

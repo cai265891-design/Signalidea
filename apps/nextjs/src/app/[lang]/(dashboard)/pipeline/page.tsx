@@ -6,6 +6,7 @@ import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
 import { AIContentSection, AINumberedList, AIStreamingText } from "~/components/pipeline/ai-content-section";
 import { useToast } from "@saasfly/ui/use-toast";
+import { analyzeRequirement } from "~/app/actions/n8n";
 
 const mockHistory = [
   {
@@ -48,32 +49,14 @@ function PipelineContent() {
   const [analysisData, setAnalysisData] = useState<N8NAnalysisData | null>(null);
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const { toast} = useToast();
+  const { toast } = useToast();
 
-  // Call n8n analysis API using tRPC endpoint
-  const analyzeRequirement = async (input: string) => {
+  // Call n8n analysis API using Server Action
+  const handleAnalyze = async (input: string) => {
     try {
       setIsAnalyzing(true);
 
-      // Call tRPC mutation endpoint directly
-      const response = await fetch(
-        `/api/trpc/edge/n8n.analyzeRequirement`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ input }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Response error:", errorText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const data = await analyzeRequirement(input);
       setAnalysisData(data);
       toast({
         title: "Analysis completed",
@@ -100,7 +83,7 @@ function PipelineContent() {
         title: "Starting analysis",
         description: "Your pipeline will begin processing shortly.",
       });
-      analyzeRequirement(queryFromUrl);
+      handleAnalyze(queryFromUrl);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryFromUrl]);
@@ -111,7 +94,7 @@ function PipelineContent() {
       description: "Your pipeline will begin processing shortly.",
     });
     // 调用 n8n 分析
-    analyzeRequirement(userInput);
+    handleAnalyze(userInput);
   };
 
   return (
