@@ -1,4 +1,5 @@
 import { ClerkProviderWrapper } from "~/components/clerk-provider-wrapper";
+import { TRPCProvider } from "~/components/trpc-provider";
 import { Inter as FontSans } from "next/font/google";
 import localFont from "next/font/local";
 
@@ -79,31 +80,33 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProviderWrapper>
-      <html lang="en" suppressHydrationWarning>
-        <head />
-        {/*<Suspense>*/}
-        {/*  <PostHogPageview />*/}
-        {/*</Suspense>*/}
-        <body
-          className={cn(
-            "min-h-screen bg-background font-sans antialiased",
-            fontSans.variable,
-            fontHeading.variable,
-          )}
-        >
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem={false}
+      <TRPCProvider>
+        <html lang="en" suppressHydrationWarning>
+          <head />
+          {/*<Suspense>*/}
+          {/*  <PostHogPageview />*/}
+          {/*</Suspense>*/}
+          <body
+            className={cn(
+              "min-h-screen bg-background font-sans antialiased",
+              fontSans.variable,
+              fontHeading.variable,
+            )}
           >
-            <NextDevtoolsProvider>{children}</NextDevtoolsProvider>
-            <Analytics />
-            <SpeedInsights />
-            <Toaster />
-            <TailwindIndicator />
-          </ThemeProvider>
-        </body>
-      </html>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem={false}
+            >
+              <NextDevtoolsProvider>{children}</NextDevtoolsProvider>
+              <Analytics />
+              <SpeedInsights />
+              <Toaster />
+              <TailwindIndicator />
+            </ThemeProvider>
+          </body>
+        </html>
+      </TRPCProvider>
     </ClerkProviderWrapper>
   );
 }

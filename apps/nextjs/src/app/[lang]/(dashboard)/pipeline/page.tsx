@@ -6,6 +6,7 @@ import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
 import { AIContentSection, AINumberedList, AIStreamingText } from "~/components/pipeline/ai-content-section";
 import { useToast } from "@saasfly/ui/use-toast";
+import { api } from "~/utils/api";
 
 const mockHistory = [
   {
@@ -47,62 +48,26 @@ function PipelineContent() {
   const [userInput, setUserInput] = useState("I want to build an AI image product");
   const [analysisData, setAnalysisData] = useState<N8NAnalysisData | null>(null);
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
 
-  // Call n8n analysis API using direct fetch to tRPC endpoint
-  const analyzeRequirement = async (input: string) => {
-    try {
-      setIsAnalyzing(true);
-
-      // Call tRPC endpoint with batch format
-      const response = await fetch(
-        `/api/trpc/edge/n8n.analyzeRequirement?batch=1`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            0: {
-              json: { input },
-            },
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Response error:", errorText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-
-      // tRPC batch response format: [{ result: { data: { json: actualData } } }]
-      if (result[0]?.result?.data?.json) {
-        const data = result[0].result.data.json;
-        setAnalysisData(data);
-        toast({
-          title: "Analysis completed",
-          description: "Requirement analysis has been completed successfully.",
-        });
-      } else if (result[0]?.error) {
-        throw new Error(result[0].error.json?.message || "tRPC error");
-      } else {
-        throw new Error("Unexpected response format");
-      }
-    } catch (error) {
+  // Use tRPC mutation hook
+  const { mutate: analyzeRequirement, isPending: isAnalyzing } = api.n8n.analyzeRequirement.useMutation({
+    onSuccess: (data) => {
+      setAnalysisData(data);
+      toast({
+        title: "Analysis completed",
+        description: "Requirement analysis has been completed successfully.",
+      });
+    },
+    onError: (error) => {
       console.error("Analysis error:", error);
       toast({
         title: "Analysis failed",
-        description: error instanceof Error ? error.message : "Unknown error",
+        description: error.message || "Unknown error",
         variant: "destructive",
       });
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
+    },
+  });
 
   // Auto-trigger analysis when query is provided from URL
   useEffect(() => {
@@ -113,7 +78,7 @@ function PipelineContent() {
         title: "Starting analysis",
         description: "Your pipeline will begin processing shortly.",
       });
-      analyzeRequirement(queryFromUrl);
+      analyzeRequirement({ input: queryFromUrl });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryFromUrl]);
@@ -124,7 +89,7 @@ function PipelineContent() {
       description: "Your pipeline will begin processing shortly.",
     });
     // 调用 n8n 分析
-    analyzeRequirement(userInput);
+    analyzeRequirement({ input: userInput });
   };
 
   return (
