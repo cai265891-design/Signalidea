@@ -224,14 +224,41 @@ const [showCreditsModal, setShowCreditsModal] = useState(false);
 - `/pipeline` - Main pipeline page
 - `/billing` - Billing & usage page
 
+## API Integration
+
+### Current Implementation: Next.js API Route (not tRPC)
+
+The pipeline uses **Next.js API Routes** instead of tRPC for n8n webhook integration:
+
+**API Endpoint**: `/api/n8n/analyze`
+- Location: `apps/nextjs/src/app/api/n8n/analyze/route.ts`
+- Method: POST
+- Payload: `{ input: string }`
+- Returns: Structured analysis data validated with Zod
+
+**Example Usage**:
+```typescript
+const response = await fetch("/api/n8n/analyze", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ input: userRequirement }),
+});
+const data = await response.json();
+```
+
+**Environment Variables**:
+- `N8N_WEBHOOK_URL`: n8n webhook endpoint
+- `N8N_API_KEY`: Optional Bearer token for authentication
+
 ## Next Steps
 
-1. Connect to tRPC API endpoints for data fetching
+1. ✅ ~~Connect to tRPC API endpoints~~ → Using Next.js API Routes for n8n integration
 2. Implement real drag-and-drop with `@dnd-kit/core`
 3. Add Stripe integration for credit purchases
 4. Implement actual PDF/HTML export functionality
 5. Add real-time status updates via WebSocket
 6. Implement credit pre-hold and rollback logic
+7. Add API endpoints for other stages (Candidate Finder, Evidence Pull, etc.)
 
 ## Notes
 

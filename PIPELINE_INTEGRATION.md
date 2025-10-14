@@ -153,11 +153,99 @@ packages/ui/src/
 └── index.ts                         # 更新导出
 ```
 
+## ✅ API 架构变更
+
+### 从 tRPC 改为 Next.js API Route
+
+**决策原因**:
+- n8n webhook 集成需要标准的 REST API 端点
+- Next.js API Route 更适合外部服务集成
+- 简化了与第三方服务的对接流程
+
+**实现方式**:
+1. **API Route**: `/api/n8n/analyze/route.ts`
+   - 使用标准的 Next.js API Route (App Router)
+   - POST 请求接收用户输入
+   - 调用 n8n webhook 进行需求分析
+   - 使用 Zod 验证返回数据结构
+   - 60秒超时保护
+   - 支持 Bearer Token 认证
+
+2. **前端调用**:
+   ```typescript
+   // 在 pipeline/page.tsx 中
+   const response = await fetch("/api/n8n/analyze", {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({ input }),
+   });
+   ```
+
+3. **环境变量**:
+   - `N8N_WEBHOOK_URL`: Intent Clarifier webhook 地址 (默认: http://localhost:5678/webhook/requirement-analysis)
+   - `N8N_COMPETITOR_DISCOVERY_URL`: Competitor Discovery webhook 地址 (默认: http://localhost:5678/webhook/competitor-discovery)
+   - `N8N_API_KEY`: n8n API 认证密钥 (可选)
+
+4. **数据流程**:
+   ```
+   用户输入 → Pipeline Page (Client)
+       ↓ fetch POST
+   Next.js API Route (/api/n8n/analyze)
+       ↓ fetch POST
+   n8n Webhook
+       ↓ AI 分析
+   返回结构化数据 → 验证 (Zod) → 前端展示
+   ```
+
+### Candidate Finder (竞品发现) - ✅ 已完成
+
+**API Route**: `/api/n8n/competitor-discovery/route.ts`
+
+1. **输入数据**:
+   ```typescript
+   {
+     userInput: string,              // 原始用户输入
+     analysisData: {                 // 来自 Intent Clarifier 的分析结果
+       "Clear Requirement Statement": string,
+       "Certainties": {
+         "Must-Haves": string[]
+       },
+       "Key Assumptions": Array<{
+         assumption: string,
+         rationale: string,
+         confidence: number
+       }>
+     }
+   }
+   ```
+
+2. **返回数据**:
+   ```typescript
+   {
+     competitors: Array<{
+       name: string,
+       tagline: string,
+       website: string,
+       lastUpdate: string,
+       confidence: number
+     }>,
+     totalFound?: number
+   }
+   ```
+
+3. **自动触发**: Intent Clarifier 完成后自动调用 Competitor Discovery
+4. **UI 展示**: 表格形式展示竞品,包含名称、标语、网站、更新时间和置信度
+5. **超时设置**: 90秒 (比 Intent Clarifier 更长,因为需要搜索和分析)
+
 ## 🚀 下一步工作
 
-1. **连接后端 API**
-   - 为完整版创建 tRPC endpoints
-   - 实现真实的数据获取和保存
+1. ✅ ~~Candidate Finder workflow 集成~~
+2. **扩展其他阶段 API**
+   - Top-5 Selector
+   - Evidence Pull (Reddit 分析)
+   - Feature Matrix
+   - Report Builder
+3. **实现信用额度消耗跟踪**
 
 2. **信用额度系统**
    - 集成 Stripe 支付

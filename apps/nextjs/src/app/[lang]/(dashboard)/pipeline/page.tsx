@@ -36,6 +36,19 @@ interface N8NAnalysisData {
   }>;
 }
 
+interface Competitor {
+  name: string;
+  tagline: string;
+  website: string;
+  lastUpdate: string;
+  confidence: number;
+}
+
+interface CompetitorDiscoveryData {
+  competitors: Competitor[];
+  totalFound?: number;
+}
+
 function PipelineContent() {
   const searchParams = useSearchParams();
   const queryFromUrl = searchParams.get("query");
@@ -46,8 +59,10 @@ function PipelineContent() {
   });
   const [userInput, setUserInput] = useState("I want to build an AI image product");
   const [analysisData, setAnalysisData] = useState<N8NAnalysisData | null>(null);
+  const [competitorData, setCompetitorData] = useState<CompetitorDiscoveryData | null>(null);
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isDiscoveringCompetitors, setIsDiscoveringCompetitors] = useState(false);
   const { toast } = useToast();
 
   // Call n8n analysis API using API Route
@@ -74,6 +89,9 @@ function PipelineContent() {
         title: "Analysis completed",
         description: "Requirement analysis has been completed successfully.",
       });
+
+      // Automatically trigger competitor discovery after analysis completes
+      await handleCompetitorDiscovery(input, data);
     } catch (error) {
       console.error("Analysis error:", error);
       toast({
@@ -83,6 +101,46 @@ function PipelineContent() {
       });
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  // Call n8n competitor discovery API
+  const handleCompetitorDiscovery = async (input: string, analysis: N8NAnalysisData) => {
+    try {
+      setIsDiscoveringCompetitors(true);
+
+      const response = await fetch("/api/n8n/competitor-discovery", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userInput: input,
+          analysisData: analysis,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      setCompetitorData(data);
+      setExpandedStages({ ...expandedStages, candidate: true });
+      toast({
+        title: "Competitors discovered",
+        description: `Found ${data.competitors?.length || 0} potential competitors.`,
+      });
+    } catch (error) {
+      console.error("Competitor discovery error:", error);
+      toast({
+        title: "Competitor discovery failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDiscoveringCompetitors(false);
     }
   };
 
@@ -206,8 +264,22 @@ function PipelineContent() {
         {/* Candidate Finder */}
         <AIStageCard
           title="Candidate Finder"
-          description={analysisData && !isAnalyzing ? "Running Analysis..." : undefined}
-          status={analysisData && !isAnalyzing ? "running" : "pending"}
+          description={
+            isDiscoveringCompetitors
+              ? "Discovering competitors..."
+              : competitorData
+              ? `Found ${competitorData.competitors.length} competitors`
+              : undefined
+          }
+          status={
+            isDiscoveringCompetitors
+              ? "running"
+              : competitorData
+              ? "completed"
+              : analysisData && !isAnalyzing
+              ? "running"
+              : "pending"
+          }
           badge="Free"
           isExpanded={expandedStages.candidate}
           onToggle={() =>
@@ -217,11 +289,89 @@ function PipelineContent() {
             })
           }
           content={
-            analysisData && !isAnalyzing ? (
+            isDiscoveringCompetitors ? (
               <AIContentSection>
                 <AIStreamingText
                   text="Analyzing market competitors and similar solutions..."
                   isStreaming={true}
+                />
+              </AIContentSection>
+            ) : competitorData ? (
+              <AIContentSection>
+                <div className="space-y-4">
+                  <div className="text-sm text-gray-600">
+                    Discovered {competitorData.competitors.length} potential competitors
+                    {competitorData.totalFound && competitorData.totalFound > competitorData.competitors.length && (
+                      <span className="ml-1">
+                        (showing top {competitorData.competitors.length} of {competitorData.totalFound})
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Competitors Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-2 px-3 font-semibold text-gray-900">Name</th>
+                          <th className="text-left py-2 px-3 font-semibold text-gray-900">Tagline</th>
+                          <th className="text-left py-2 px-3 font-semibold text-gray-900">Website</th>
+                          <th className="text-left py-2 px-3 font-semibold text-gray-900">Last Update</th>
+                          <th className="text-right py-2 px-3 font-semibold text-gray-900">Confidence</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {competitorData.competitors.map((competitor, idx) => (
+                          <tr
+                            key={idx}
+                            className={`border-b border-gray-100 hover:bg-gray-50 ${
+                              idx % 2 === 0 ? "bg-white" : "bg-gray-25"
+                            }`}
+                          >
+                            <td className="py-3 px-3">
+                              <span className="font-medium text-gray-900">{competitor.name}</span>
+                            </td>
+                            <td className="py-3 px-3 text-gray-600 max-w-xs truncate">
+                              {competitor.tagline}
+                            </td>
+                            <td className="py-3 px-3">
+                              <a
+                                href={competitor.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 hover:underline"
+                              >
+                                {competitor.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                              </a>
+                            </td>
+                            <td className="py-3 px-3 text-gray-600 text-xs">
+                              {competitor.lastUpdate}
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <span
+                                className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                  competitor.confidence >= 0.8
+                                    ? "bg-green-100 text-green-700"
+                                    : competitor.confidence >= 0.6
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-gray-100 text-gray-700"
+                                }`}
+                              >
+                                {Math.round(competitor.confidence * 100)}%
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </AIContentSection>
+            ) : analysisData && !isAnalyzing ? (
+              <AIContentSection>
+                <AIStreamingText
+                  text="Waiting to start competitor discovery..."
+                  isStreaming={false}
                 />
               </AIContentSection>
             ) : undefined

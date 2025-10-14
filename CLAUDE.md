@@ -36,8 +36,11 @@ bun run typecheck
 
 ### Building & Testing
 ```bash
-# Build all packages
+# Build all packages (excludes auth-proxy)
 bun run build
+
+# Build all packages including auth-proxy
+bun run build:all
 
 # Database operations
 bun db:push  # Push schema changes
@@ -47,6 +50,9 @@ bun run clean
 
 # Generate new components/packages
 bun run gen
+
+# View Tailwind CSS configuration (optional)
+bun run tailwind-config-viewer  # Access at http://localhost:3333
 ```
 
 ## Architecture Overview
@@ -182,3 +188,4 @@ When deploying to Vercel:
 - **MDX processing**: Build requires running `contentlayer2 build` before `next build`
 - **Standalone output**: Next.js configured with `output: "standalone"` for optimized deployment
 - **Type generation**: Database types auto-generated; don't manually edit `types.ts` or `enums.ts` in db package
+- **Admin Dashboard**: Alpha feature available at `/admin/dashboard` - configure admin emails in `ADMIN_EMAIL` env var (comma-separated)
