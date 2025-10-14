@@ -6,7 +6,6 @@ import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
 import { AIContentSection, AINumberedList, AIStreamingText } from "~/components/pipeline/ai-content-section";
 import { useToast } from "@saasfly/ui/use-toast";
-import { analyzeRequirement } from "~/app/actions/n8n";
 
 const mockHistory = [
   {
@@ -51,12 +50,25 @@ function PipelineContent() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
 
-  // Call n8n analysis API using Server Action
+  // Call n8n analysis API using API Route
   const handleAnalyze = async (input: string) => {
     try {
       setIsAnalyzing(true);
 
-      const data = await analyzeRequirement(input);
+      const response = await fetch("/api/n8n/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ input }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
       setAnalysisData(data);
       toast({
         title: "Analysis completed",

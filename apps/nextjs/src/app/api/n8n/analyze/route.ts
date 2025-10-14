@@ -1,5 +1,4 @@
-"use server";
-
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || "http://localhost:5678/webhook/requirement-analysis";
@@ -20,10 +19,18 @@ const N8NResponseSchema = z.object({
   ),
 });
 
-export type N8NAnalysisResult = z.infer<typeof N8NResponseSchema>;
-
-export async function analyzeRequirement(input: string): Promise<N8NAnalysisResult> {
+export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
+    const { input } = body;
+
+    if (!input || typeof input !== "string") {
+      return NextResponse.json(
+        { error: "Input is required and must be a string" },
+        { status: 400 }
+      );
+    }
+
     // 调用 n8n webhook
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -46,20 +53,34 @@ export async function analyzeRequirement(input: string): Promise<N8NAnalysisResu
     if (!response.ok) {
       const errorText = await response.text();
       console.error("n8n webhook error:", errorText);
-      throw new Error(`n8n webhook failed: ${response.status} ${response.statusText}`);
+      return NextResponse.json(
+        { error: `n8n webhook failed: ${response.status} ${response.statusText}`, details: errorText },
+        { status: response.status }
+      );
     }
 
     const data = await response.json();
     console.log("N8N response:", data);
 
     // 验证返回数据结构
-    const validatedData = N8NResponseSchema.parse(data);
-
-    return validatedData;
+    try {
+      const validatedData = N8NResponseSchema.parse(data);
+      return NextResponse.json(validatedData);
+    } catch (validationError) {
+      console.error("Validation error:", validationError);
+      return NextResponse.json(
+        { error: "Invalid response format from N8N", data },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error("Error calling n8n webhook:", error);
-    throw new Error(
-      `Failed to analyze requirement: ${error instanceof Error ? error.message : "Unknown error"}`,
+    console.error("Error in N8N analyze route:", error);
+    return NextResponse.json(
+      {
+        error: "Failed to analyze requirement",
+        message: error instanceof Error ? error.message : "Unknown error"
+      },
+      { status: 500 }
     );
   }
 }
