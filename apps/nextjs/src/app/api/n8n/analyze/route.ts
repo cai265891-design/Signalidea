@@ -21,10 +21,13 @@ const N8NResponseSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("[N8N API] Received request");
     const body = await request.json();
     const { input } = body;
+    console.log("[N8N API] Request body:", { input });
 
     if (!input || typeof input !== "string") {
+      console.error("[N8N API] Invalid input:", { input, type: typeof input });
       return NextResponse.json(
         { error: "Input is required and must be a string" },
         { status: 400 }
@@ -67,32 +70,36 @@ export async function POST(request: NextRequest) {
       }
 
       const data = await response.json();
-      console.log("N8N response:", data);
+      console.log("[N8N API] N8N response:", data);
 
       // 验证返回数据结构
       try {
         const validatedData = N8NResponseSchema.parse(data);
+        console.log("[N8N API] Validation successful, returning data");
         return NextResponse.json(validatedData);
       } catch (validationError) {
-        console.error("Validation error:", validationError);
+        console.error("[N8N API] Validation error:", validationError);
+        console.error("[N8N API] Data that failed validation:", JSON.stringify(data, null, 2));
         return NextResponse.json(
-          { error: "Invalid response format from N8N", data },
+          { error: "Invalid response format from N8N", details: validationError instanceof Error ? validationError.message : String(validationError) },
           { status: 500 }
         );
       }
     } catch (fetchError) {
       clearTimeout(timeoutId);
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        console.error("N8N request timed out");
+        console.error("[N8N API] N8N request timed out");
         return NextResponse.json(
           { error: "N8N webhook request timed out after 60 seconds" },
           { status: 504 }
         );
       }
+      console.error("[N8N API] Fetch error:", fetchError);
       throw fetchError;
     }
   } catch (error) {
-    console.error("Error in N8N analyze route:", error);
+    console.error("[N8N API] Top-level error in N8N analyze route:", error);
+    console.error("[N8N API] Error stack:", error instanceof Error ? error.stack : "No stack trace");
     return NextResponse.json(
       {
         error: "Failed to analyze requirement",
