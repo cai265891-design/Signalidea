@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // Add authentication header if API key is configured
     if (N8N_API_KEY) {
-      headers["Authorization"] = N8N_API_KEY;
+      headers["Authorization"] = `Bearer ${N8N_API_KEY}`;
     }
 
     console.log("Calling N8N webhook:", N8N_WEBHOOK_URL);
