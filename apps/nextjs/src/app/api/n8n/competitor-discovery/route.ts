@@ -146,13 +146,23 @@ export async function POST(request: NextRequest) {
         console.log("[N8N Competitor Discovery] Validation successful");
 
         // Normalize response: always return array format for next workflow
-        const competitors = Array.isArray(validatedData) ? validatedData : [validatedData];
+        const rawCompetitors = Array.isArray(validatedData) ? validatedData : [validatedData];
+
+        // Transform N8N format to frontend format
+        const competitors = rawCompetitors.map(comp => ({
+          name: comp.name,
+          tagline: comp.primary_job || comp.category || "No description available",
+          website: comp.evidence?.homepage || "",
+          lastUpdate: new Date().toISOString().split('T')[0], // Use current date as placeholder
+          confidence: comp.confidence,
+        }));
+
         const response = {
           competitors,
           totalFound: competitors.length,
         };
 
-        console.log("[N8N Competitor Discovery] Returning normalized data:", JSON.stringify(response, null, 2));
+        console.log("[N8N Competitor Discovery] Returning transformed data:", JSON.stringify(response, null, 2));
         return NextResponse.json(response);
       } catch (validationError) {
         console.error("[N8N Competitor Discovery] Validation error:", validationError);
