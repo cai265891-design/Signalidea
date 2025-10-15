@@ -23,7 +23,8 @@
       "Read(//private/tmp/**)",
       "Bash(curl:*)",
       "Bash(lsof:*)",
-      "Bash(bun with-env:*)"
+      "Bash(bun with-env:*)",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "ask": []

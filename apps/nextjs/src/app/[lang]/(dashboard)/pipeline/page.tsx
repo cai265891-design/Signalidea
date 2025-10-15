@@ -27,7 +27,11 @@ const mockHistory = [
 interface N8NAnalysisData {
   "Clear Requirement Statement": string;
   Certainties: {
+    "Target User Profile"?: string;
+    "Target Market"?: string;
     "Must-Haves": string[];
+    "Success Criteria"?: string[];
+    "Out of Scope"?: string[];
   };
   "Key Assumptions": Array<{
     assumption: string;

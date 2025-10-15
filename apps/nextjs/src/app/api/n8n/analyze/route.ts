@@ -4,11 +4,15 @@ import { z } from "zod";
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || "http://localhost:5678/webhook/requirement-analysis";
 const N8N_API_KEY = process.env.N8N_API_KEY;
 
-// n8n 返回数据的类型定义
+// n8n 返回数据的类型定义 - includes all fields from Intent Clarifier
 const N8NResponseSchema = z.object({
   "Clear Requirement Statement": z.string(),
   Certainties: z.object({
+    "Target User Profile": z.string().optional(),
+    "Target Market": z.string().optional(),
     "Must-Haves": z.array(z.string()),
+    "Success Criteria": z.array(z.string()).optional(),
+    "Out of Scope": z.array(z.string()).optional(),
   }),
   "Key Assumptions": z.array(
     z.object({
