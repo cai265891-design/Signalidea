@@ -27,6 +27,21 @@ process.env.POSTGRES_URL = process.env.POSTGRES_URL || 'postgresql://user:pass@l
 process.env.RESEND_API_KEY = process.env.RESEND_API_KEY || 're_placeholder';
 process.env.RESEND_FROM = process.env.RESEND_FROM || 'noreply@example.com';
 
+// N8N Configuration - should be set in Vercel environment variables
+// These are fallbacks only for build-time validation
+if (!process.env.N8N_WEBHOOK_URL) {
+  console.warn('⚠️  N8N_WEBHOOK_URL not set - using placeholder for build');
+  process.env.N8N_WEBHOOK_URL = 'http://placeholder-n8n-url.example.com/webhook/requirement-analysis';
+}
+if (!process.env.N8N_COMPETITOR_DISCOVERY_URL) {
+  console.warn('⚠️  N8N_COMPETITOR_DISCOVERY_URL not set - using placeholder for build');
+  process.env.N8N_COMPETITOR_DISCOVERY_URL = 'http://placeholder-n8n-url.example.com/webhook/competitor-discovery';
+}
+if (!process.env.N8N_API_KEY) {
+  console.warn('⚠️  N8N_API_KEY not set - runtime requests may fail');
+  process.env.N8N_API_KEY = 'placeholder_api_key';
+}
+
 console.log('Building with environment variables set...');
 console.log('Current directory:', process.cwd());
 console.log('CI:', process.env.CI);
