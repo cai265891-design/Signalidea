@@ -48,8 +48,11 @@ const N8NResponseSchema = z.union([
 export async function POST(request: NextRequest) {
   try {
     console.log("[N8N Competitor Discovery] Received request");
+    console.log("[N8N Competitor Discovery] Webhook URL:", N8N_WEBHOOK_URL);
+    console.log("[N8N Competitor Discovery] API Key configured:", !!N8N_API_KEY);
+
     const body = await request.json();
-    console.log("[N8N Competitor Discovery] Request body:", body);
+    console.log("[N8N Competitor Discovery] Request body:", JSON.stringify(body, null, 2));
 
     // Validate input
     const validatedInput = InputSchema.parse(body);
@@ -172,7 +175,15 @@ export async function POST(request: NextRequest) {
         );
       }
       console.error("[N8N Competitor Discovery] Fetch error:", fetchError);
-      throw fetchError;
+      console.error("[N8N Competitor Discovery] Webhook URL was:", N8N_WEBHOOK_URL);
+      return NextResponse.json(
+        {
+          error: "Failed to connect to N8N webhook",
+          message: fetchError instanceof Error ? fetchError.message : String(fetchError),
+          webhookUrl: N8N_WEBHOOK_URL.replace(/\/\/[^@]+@/, '//***@') // Hide credentials if any
+        },
+        { status: 502 }
+      );
     }
   } catch (error) {
     console.error("[N8N Competitor Discovery] Top-level error:", error);

@@ -24,7 +24,10 @@
       "Bash(curl:*)",
       "Bash(lsof:*)",
       "Bash(bun with-env:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(vercel logs:*)",
+      "Bash(vercel ls:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
