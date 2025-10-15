@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || "http://localhost:5678/webhook/requirement-analysis";
+const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL;
 const N8N_API_KEY = process.env.N8N_API_KEY;
+
+// Early validation
+if (!N8N_WEBHOOK_URL) {
+  console.error("[N8N API] N8N_WEBHOOK_URL environment variable is not set");
+}
 
 // n8n 返回数据的类型定义 - includes all fields from Intent Clarifier
 const N8NResponseSchema = z.object({
@@ -26,6 +31,18 @@ const N8NResponseSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     console.log("[N8N API] Received request");
+
+    // Check environment variable
+    if (!N8N_WEBHOOK_URL) {
+      return NextResponse.json(
+        {
+          error: "Server configuration error",
+          details: "N8N_WEBHOOK_URL environment variable is not configured"
+        },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const { input } = body;
     console.log("[N8N API] Request body:", { input });

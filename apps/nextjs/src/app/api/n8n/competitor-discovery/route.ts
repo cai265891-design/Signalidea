@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-const N8N_WEBHOOK_URL = process.env.N8N_COMPETITOR_DISCOVERY_URL || "http://localhost:5678/webhook/competitor-discovery";
+const N8N_WEBHOOK_URL = process.env.N8N_COMPETITOR_DISCOVERY_URL;
 const N8N_API_KEY = process.env.N8N_API_KEY;
+
+// Early validation of required environment variables
+if (!N8N_WEBHOOK_URL) {
+  console.error("[N8N Competitor Discovery] N8N_COMPETITOR_DISCOVERY_URL environment variable is not set");
+}
+if (!N8N_API_KEY) {
+  console.warn("[N8N Competitor Discovery] N8N_API_KEY environment variable is not set - requests may fail");
+}
 
 // Input schema: data from Intent Clarifier
 const InputSchema = z.object({
@@ -50,6 +58,18 @@ export async function POST(request: NextRequest) {
     console.log("[N8N Competitor Discovery] Received request");
     console.log("[N8N Competitor Discovery] Webhook URL:", N8N_WEBHOOK_URL);
     console.log("[N8N Competitor Discovery] API Key configured:", !!N8N_API_KEY);
+
+    // Check if required environment variables are set
+    if (!N8N_WEBHOOK_URL) {
+      console.error("[N8N Competitor Discovery] Missing N8N_COMPETITOR_DISCOVERY_URL");
+      return NextResponse.json(
+        {
+          error: "Server configuration error",
+          details: "N8N_COMPETITOR_DISCOVERY_URL environment variable is not configured"
+        },
+        { status: 500 }
+      );
+    }
 
     const body = await request.json();
     console.log("[N8N Competitor Discovery] Request body:", JSON.stringify(body, null, 2));
