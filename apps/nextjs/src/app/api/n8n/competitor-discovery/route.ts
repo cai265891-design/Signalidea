@@ -10,7 +10,11 @@ const InputSchema = z.object({
   analysisData: z.object({
     "Clear Requirement Statement": z.string(),
     Certainties: z.object({
+      "Target User Profile": z.string().optional(),
+      "Target Market": z.string().optional(),
       "Must-Haves": z.array(z.string()),
+      "Success Criteria": z.array(z.string()).optional(),
+      "Out of Scope": z.array(z.string()).optional(),
     }),
     "Key Assumptions": z.array(
       z.object({
@@ -22,19 +26,24 @@ const InputSchema = z.object({
   }),
 });
 
-// n8n competitor discovery response schema
+// n8n competitor discovery response schema - matches actual N8N output
 const N8NCompetitorSchema = z.object({
   name: z.string(),
-  tagline: z.string(),
-  website: z.string(),
-  lastUpdate: z.string(),
+  category: z.string().optional(),
+  platform: z.array(z.string()).optional(),
+  primary_job: z.string().optional(),
+  target_user: z.string().optional(),
+  evidence: z.object({
+    homepage: z.string().optional(),
+  }).optional(),
   confidence: z.number(),
 });
 
-const N8NResponseSchema = z.object({
-  competitors: z.array(N8NCompetitorSchema),
-  totalFound: z.number().optional(),
-});
+// N8N returns either a single competitor or an array
+const N8NResponseSchema = z.union([
+  N8NCompetitorSchema,
+  z.array(N8NCompetitorSchema),
+]);
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,11 +55,17 @@ export async function POST(request: NextRequest) {
     const validatedInput = InputSchema.parse(body);
     console.log("[N8N Competitor Discovery] Input validated successfully");
 
-    // Prepare payload for n8n
+    // Prepare payload for n8n - pass all fields from Intent Clarifier
     const payload = {
       userInput: validatedInput.userInput,
       requirementStatement: validatedInput.analysisData["Clear Requirement Statement"],
-      mustHaves: validatedInput.analysisData.Certainties["Must-Haves"],
+      certainties: {
+        targetUserProfile: validatedInput.analysisData.Certainties["Target User Profile"],
+        targetMarket: validatedInput.analysisData.Certainties["Target Market"],
+        mustHaves: validatedInput.analysisData.Certainties["Must-Haves"],
+        successCriteria: validatedInput.analysisData.Certainties["Success Criteria"],
+        outOfScope: validatedInput.analysisData.Certainties["Out of Scope"],
+      },
       keyAssumptions: validatedInput.analysisData["Key Assumptions"],
     };
 
@@ -91,14 +106,51 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const data = await response.json();
-      console.log("[N8N Competitor Discovery] N8N response:", data);
+      const responseText = await response.text();
+      console.log("[N8N Competitor Discovery] N8N raw response:", responseText);
+
+      // Check if response is empty
+      if (!responseText || responseText.trim() === '') {
+        console.error("[N8N Competitor Discovery] Empty response from N8N");
+        return NextResponse.json(
+          {
+            error: "N8N workflow returned empty response",
+            details: "The competitor-discovery webhook may not be properly configured in N8N"
+          },
+          { status: 500 }
+        );
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log("[N8N Competitor Discovery] N8N response:", data);
+      } catch (parseError) {
+        console.error("[N8N Competitor Discovery] Failed to parse N8N response:", parseError);
+        console.error("[N8N Competitor Discovery] Raw response text:", responseText);
+        return NextResponse.json(
+          {
+            error: "Invalid JSON response from N8N",
+            details: responseText.substring(0, 500) // Return first 500 chars for debugging
+          },
+          { status: 500 }
+        );
+      }
 
       // Validate response structure
       try {
         const validatedData = N8NResponseSchema.parse(data);
-        console.log("[N8N Competitor Discovery] Validation successful, returning data");
-        return NextResponse.json(validatedData);
+        console.log("[N8N Competitor Discovery] Validation successful");
+
+        // Normalize response: always return array format for next workflow
+        const competitors = Array.isArray(validatedData) ? validatedData : [validatedData];
+        const response = {
+          competitors,
+          totalFound: competitors.length,
+        };
+
+        console.log("[N8N Competitor Discovery] Returning normalized data:", JSON.stringify(response, null, 2));
+        return NextResponse.json(response);
       } catch (validationError) {
         console.error("[N8N Competitor Discovery] Validation error:", validationError);
         console.error("[N8N Competitor Discovery] Data that failed validation:", JSON.stringify(data, null, 2));

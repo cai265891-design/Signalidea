@@ -189,3 +189,4 @@ When deploying to Vercel:
 - **Standalone output**: Next.js configured with `output: "standalone"` for optimized deployment
 - **Type generation**: Database types auto-generated; don't manually edit `types.ts` or `enums.ts` in db package
 - **Admin Dashboard**: Alpha feature available at `/admin/dashboard` - configure admin emails in `ADMIN_EMAIL` env var (comma-separated)
+- **N8n Integration**: Project includes N8n workflow integration with API endpoints at `apps/nextjs/src/app/api/n8n/` and tRPC router at `packages/api/src/router/n8n.ts`
