@@ -237,15 +237,43 @@ packages/ui/src/
 4. **UI 展示**: 表格形式展示竞品,包含名称、标语、网站、更新时间和置信度
 5. **超时设置**: 90秒 (比 Intent Clarifier 更长,因为需要搜索和分析)
 
+### Top-5 Selector (前端逻辑筛选) - ✅ 已完成
+
+**实现方式**: 前端逻辑,无需 N8N 工作流
+
+1. **触发时机**: Candidate Finder 完成后自动执行
+2. **筛选逻辑**:
+   - 按 confidence 降序排序所有竞品
+   - 自动选择 Top 5
+   - 用户可以查看并批准
+
+3. **UI 功能**:
+   - 显示 Top 5 竞品列表,带排名编号
+   - 每个竞品显示名称、tagline、confidence
+   - "Approve & Continue" 按钮进入下一阶段
+   - (TODO: Drag-and-drop 重新排序)
+   - (TODO: 替换功能 - 从剩余竞品中选择)
+
+4. **状态管理**:
+   ```typescript
+   const [topFiveCompetitors, setTopFiveCompetitors] = useState<Competitor[]>([]);
+   ```
+
+5. **为什么不用 N8N**:
+   - Top-5 筛选是确定性逻辑(按 confidence 排序)
+   - 前端筛选速度更快(毫秒级 vs 秒级)
+   - 节省 AI API 成本
+   - 用户可以手动调整
+
 ## 🚀 下一步工作
 
 1. ✅ ~~Candidate Finder workflow 集成~~
-2. **扩展其他阶段 API**
-   - Top-5 Selector
+2. ✅ ~~Top-5 Selector 前端逻辑~~
+3. **扩展其他阶段 API**
    - Evidence Pull (Reddit 分析)
    - Feature Matrix
    - Report Builder
-3. **实现信用额度消耗跟踪**
+4. **实现信用额度消耗跟踪**
 
 2. **信用额度系统**
    - 集成 Stripe 支付

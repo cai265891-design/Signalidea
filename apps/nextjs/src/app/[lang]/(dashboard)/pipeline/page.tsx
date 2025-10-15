@@ -60,14 +60,16 @@ function PipelineContent() {
   const [expandedStages, setExpandedStages] = useState<Record<string, boolean>>({
     intent: true,
     candidate: false,
+    topFive: false,
   });
   const [userInput, setUserInput] = useState("I want to build an AI image product");
   const [analysisData, setAnalysisData] = useState<N8NAnalysisData | null>(null);
   const [competitorData, setCompetitorData] = useState<CompetitorDiscoveryData | null>(null);
+  const [topFiveCompetitors, setTopFiveCompetitors] = useState<Competitor[]>([]);
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDiscoveringCompetitors, setIsDiscoveringCompetitors] = useState(false);
-  const { toast } = useToast();
+  const { toast} = useToast();
 
   // Call n8n analysis API using API Route
   const handleAnalyze = async (input: string) => {
@@ -131,7 +133,17 @@ function PipelineContent() {
 
       const data = await response.json();
       setCompetitorData(data);
-      setExpandedStages({ ...expandedStages, candidate: true });
+
+      // Automatically extract Top 5 by confidence
+      if (data.competitors && data.competitors.length > 0) {
+        const sortedCompetitors = [...data.competitors].sort((a, b) => b.confidence - a.confidence);
+        const topFive = sortedCompetitors.slice(0, 5);
+        setTopFiveCompetitors(topFive);
+        setExpandedStages({ ...expandedStages, candidate: true, topFive: true });
+      } else {
+        setExpandedStages({ ...expandedStages, candidate: true });
+      }
+
       toast({
         title: "Competitors discovered",
         description: `Found ${data.competitors?.length || 0} potential competitors.`,
@@ -146,6 +158,41 @@ function PipelineContent() {
     } finally {
       setIsDiscoveringCompetitors(false);
     }
+  };
+
+  // Handle Top-5 reordering
+  const handleTopFiveReorder = (reorderedCompetitors: Competitor[]) => {
+    setTopFiveCompetitors(reorderedCompetitors);
+  };
+
+  // Handle Top-5 replacement
+  const handleTopFiveReplace = (id: string) => {
+    // Find remaining competitors not in top 5
+    const topFiveNames = new Set(topFiveCompetitors.map(c => c.name));
+    const remainingCompetitors = competitorData?.competitors.filter(
+      c => !topFiveNames.has(c.name)
+    ) || [];
+
+    if (remainingCompetitors.length > 0) {
+      // Replace the competitor with the next best alternative
+      const newTopFive = topFiveCompetitors.map((c) =>
+        c.name === id ? remainingCompetitors[0] : c
+      );
+      setTopFiveCompetitors(newTopFive);
+      toast({
+        title: "Competitor replaced",
+        description: `Replaced with ${remainingCompetitors[0].name}`,
+      });
+    }
+  };
+
+  // Handle Top-5 approval
+  const handleTopFiveApprove = () => {
+    toast({
+      title: "Top 5 approved",
+      description: "Ready for deep analysis. (Next stages coming soon!)",
+    });
+    // TODO: Trigger next stage (Evidence Pull)
   };
 
   // Auto-trigger analysis when query is provided from URL
@@ -383,7 +430,98 @@ function PipelineContent() {
         />
 
         {/* Upcoming Stages */}
-        <AIStageCard title="Top-5 Selector" status="pending" badge="Free" />
+        {/* Top-5 Selector */}
+        <AIStageCard
+          title="Top-5 Selector"
+          description={
+            topFiveCompetitors.length > 0
+              ? "Review and reorder the top 5 competitors for deep analysis"
+              : undefined
+          }
+          status={
+            topFiveCompetitors.length > 0
+              ? "needs-approval"
+              : competitorData
+              ? "running"
+              : "pending"
+          }
+          badge="Free"
+          isExpanded={expandedStages.topFive}
+          onToggle={() =>
+            setExpandedStages({
+              ...expandedStages,
+              topFive: !expandedStages.topFive,
+            })
+          }
+          content={
+            topFiveCompetitors.length > 0 ? (
+              <AIContentSection>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    The top 5 competitors have been automatically selected based on relevance scores.
+                    You can reorder them by dragging, or replace any competitor before proceeding.
+                  </p>
+
+                  {/* Top 5 List */}
+                  <div className="space-y-2">
+                    {topFiveCompetitors.map((competitor, index) => (
+                      <div
+                        key={competitor.name}
+                        className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 hover:border-gray-300 transition-colors"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-medium text-sm shrink-0">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 truncate">
+                            {competitor.name}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {competitor.tagline}
+                          </div>
+                        </div>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium shrink-0 ${
+                            competitor.confidence >= 0.8
+                              ? "bg-green-100 text-green-700"
+                              : competitor.confidence >= 0.6
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-gray-100 text-gray-700"
+                          }`}
+                        >
+                          {Math.round(competitor.confidence * 100)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Approve Button */}
+                  <div className="flex justify-end pt-2">
+                    <button
+                      onClick={handleTopFiveApprove}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    >
+                      Approve & Continue
+                    </button>
+                  </div>
+                </div>
+              </AIContentSection>
+            ) : competitorData ? (
+              <AIContentSection>
+                <AIStreamingText
+                  text="Selecting top 5 competitors based on relevance..."
+                  isStreaming={true}
+                />
+              </AIContentSection>
+            ) : (
+              <AIContentSection>
+                <p className="text-sm text-gray-500">
+                  Waiting for competitor discovery to complete
+                </p>
+              </AIContentSection>
+            )
+          }
+        />
 
         <AIStageCard
           title="Evidence Pull"
