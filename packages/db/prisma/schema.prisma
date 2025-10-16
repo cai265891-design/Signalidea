@@ -101,3 +101,45 @@ enum Status {
   STOPPED
   DELETED
 }
+
+enum AnalysisStatus {
+  PENDING       // 等待处理
+  PROCESSING    // 正在处理
+  COMPLETED     // 已完成
+  FAILED        // 失败
+}
+
+enum WorkflowType {
+  FEATURE_MATRIX  // 竞品功能矩阵
+  REDDIT_SEARCH   // Reddit 搜索
+}
+
+// 通用的异步任务表 - 支持竞品分析、Reddit 搜索等
+model AsyncAnalysisTask {
+  id            Int            @id @default(autoincrement())
+  projectId     Int            // 项目 ID
+  authUserId    String         // 用户 ID
+  workflowType  WorkflowType   // 工作流类型
+  status        AnalysisStatus @default(PENDING)
+
+  // 输入数据
+  inputData     Json           // 存储输入参数 (竞品信息/搜索关键词等)
+
+  // 中间结果
+  discoveredUrls Json?         // 工作流1 发现的 URLs
+
+  // 最终结果
+  result        Json?          // 工作流2 返回的分析结果
+
+  // 元数据
+  n8nExecutionId String?       // N8N 执行 ID
+  errorMessage   String?       // 错误信息
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  completedAt   DateTime?      // 完成时间
+
+  @@index([projectId])
+  @@index([authUserId])
+  @@index([status])
+}

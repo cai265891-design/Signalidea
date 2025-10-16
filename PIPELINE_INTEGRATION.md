@@ -18,7 +18,7 @@
 - **位置**: `apps/nextjs/src/app/[lang]/(dashboard)/pipeline/page.tsx`
 - **特点**:
   - 受 Clerk 认证保护,未登录自动跳转到登录页
-  - 准备连接真实 tRPC API
+  - 连接 Next.js API Routes
   - 真实的信用额度和计费系统
 
 ### 2. Billing 页面重构

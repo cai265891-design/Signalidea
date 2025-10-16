@@ -37,6 +37,10 @@ if (!process.env.N8N_COMPETITOR_DISCOVERY_URL) {
   console.warn('⚠️  N8N_COMPETITOR_DISCOVERY_URL not set - using placeholder for build');
   process.env.N8N_COMPETITOR_DISCOVERY_URL = 'http://placeholder-n8n-url.example.com/webhook/competitor-discovery';
 }
+if (!process.env.N8N_TOP_FIVE_SELECTOR_URL) {
+  console.warn('⚠️  N8N_TOP_FIVE_SELECTOR_URL not set - using placeholder for build');
+  process.env.N8N_TOP_FIVE_SELECTOR_URL = 'http://placeholder-n8n-url.example.com/webhook/top-five-selector';
+}
 if (!process.env.N8N_API_KEY) {
   console.warn('⚠️  N8N_API_KEY not set - runtime requests may fail');
   process.env.N8N_API_KEY = 'placeholder_api_key';

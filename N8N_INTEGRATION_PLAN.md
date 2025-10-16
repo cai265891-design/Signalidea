@@ -8,7 +8,7 @@
 
 ### 交互模式
 ```
-前端 ↔ tRPC API ↔ 数据库 ↔ n8n Workflows
+前端 ↔ Next.js API Routes ↔ 数据库 ↔ n8n Workflows
          ↓                    ↑
     触发 n8n (Webhook)        |
          └─────────────────────┘
@@ -17,17 +17,17 @@
 ### 工作流交互方式
 
 **方式 A: Webhook 触发(推荐)**
-- 前端通过 tRPC 触发
-- tRPC 调用 n8n webhook
-- n8n 执行完成后回调 tRPC endpoint
-- tRPC 更新数据库状态
+- 前端通过 API Route 触发
+- API Route 调用 n8n webhook
+- n8n 执行完成后回调 API endpoint
+- API Route 更新数据库状态
 - 前端轮询或 WebSocket 获取结果
 
 **方式 B: 数据库轮询**
-- tRPC 创建任务记录
+- API Route 创建任务记录
 - n8n 定时轮询数据库
 - n8n 处理后更新数据库
-- 前端轮询 tRPC 获取结果
+- 前端轮询 API 获取结果
 
 ## 🎯 五大工作流
 
@@ -44,7 +44,7 @@ Webhook 触发
       - 目标用户 (targetUsers)
       - 痛点分析 (painPoints)
       - 商业目标 (businessGoals)
-  → HTTP Request 回调 tRPC webhook
+  → HTTP Request 回调 API endpoint
 ```
 
 **输入**:
@@ -297,13 +297,13 @@ enum WorkflowStatus {
 }
 ```
 
-## 🔌 tRPC API 端点设计
+## 🔌 Next.js API Routes 端点设计
 
 ### Router: `packages/api/src/router/workflow.ts`
 
 ```typescript
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
+import { Next.js API Route, // 使用 @clerk/nextjs/server auth(), // 公开 API endpoint } from "../trpc";
 import { db, WorkflowStatus } from "@saasfly/db";
 import { getCurrentUser } from "@saasfly/auth";
 
@@ -311,10 +311,10 @@ const N8N_URL = process.env.N8N_WEBHOOK_URL;
 const N8N_API_KEY = process.env.N8N_API_KEY;
 const N8N_CALLBACK_SECRET = process.env.N8N_CALLBACK_SECRET;
 
-export const workflowRouter = createTRPCRouter({
+export const workflowRouter = Next.js API Route({
 
   // 1. 创建项目并触发需求分析
-  createProject: protectedProcedure
+  createProject: // 使用 @clerk/nextjs/server auth()
     .input(z.object({
       name: z.string(),
       description: z.string(),
@@ -376,7 +376,7 @@ export const workflowRouter = createTRPCRouter({
     }),
 
   // 2. 触发竞品挖掘
-  triggerCompetitorDiscovery: protectedProcedure
+  triggerCompetitorDiscovery: // 使用 @clerk/nextjs/server auth()
     .input(z.object({ projectId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const user = await getCurrentUser();
@@ -421,7 +421,7 @@ export const workflowRouter = createTRPCRouter({
     }),
 
   // 3. 触发竞品功能分析
-  triggerFeatureAnalysis: protectedProcedure
+  triggerFeatureAnalysis: // 使用 @clerk/nextjs/server auth()
     .input(z.object({
       projectId: z.number(),
       competitorIds: z.array(z.number()),
@@ -462,7 +462,7 @@ export const workflowRouter = createTRPCRouter({
     }),
 
   // 4. 触发 Reddit 需求收集
-  triggerRedditInsights: protectedProcedure
+  triggerRedditInsights: // 使用 @clerk/nextjs/server auth()
     .input(z.object({
       projectId: z.number(),
       keywords: z.array(z.string()),
@@ -505,7 +505,7 @@ export const workflowRouter = createTRPCRouter({
     }),
 
   // 5. 触发最终汇总
-  triggerFinalSummary: protectedProcedure
+  triggerFinalSummary: // 使用 @clerk/nextjs/server auth()
     .input(z.object({ projectId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const user = await getCurrentUser();
@@ -576,7 +576,7 @@ export const workflowRouter = createTRPCRouter({
     }),
 
   // 6. 获取项目状态(包含所有工作流状态)
-  getProjectStatus: protectedProcedure
+  getProjectStatus: // 使用 @clerk/nextjs/server auth()
     .input(z.object({ projectId: z.number() }))
     .query(async ({ input, ctx }) => {
       const user = await getCurrentUser();
@@ -642,7 +642,7 @@ export const workflowRouter = createTRPCRouter({
     }),
 
   // 7. 获取项目列表
-  listProjects: protectedProcedure
+  listProjects: // 使用 @clerk/nextjs/server auth()
     .query(async ({ ctx }) => {
       const user = await getCurrentUser();
       if (!user) {
@@ -658,7 +658,7 @@ export const workflowRouter = createTRPCRouter({
     }),
 
   // 8. n8n 回调端点(更新结果)
-  webhookCallback: publicProcedure
+  webhookCallback: // 公开 API endpoint
     .input(z.object({
       secret: z.string(),
       projectId: z.number(),
@@ -795,7 +795,7 @@ export const workflowRouter = createTRPCRouter({
 
 import { useEffect } from "react";
 import { useParams } from "next/navigation";
-import { api } from "@/trpc/react";
+// 使用标准 fetch 调用 API Routes
 import { Button } from "@saasfly/ui/button";
 import { Card } from "@saasfly/ui/card";
 import { Badge } from "@saasfly/ui/badge";
@@ -1151,7 +1151,7 @@ export default function ProjectDetailPage() {
 
 "use client";
 
-import { api } from "@/trpc/react";
+// 使用标准 fetch 调用 API Routes
 import { Button } from "@saasfly/ui/button";
 import { Card } from "@saasfly/ui/card";
 import { useRouter } from "next/navigation";
@@ -1227,7 +1227,7 @@ N8N_CALLBACK_SECRET=your-shared-secret-key-for-callbacks
 2. 运行 `bun db:push` 应用数据库变更
 3. 验证数据库表创建成功
 
-### Phase 2: tRPC API 开发
+### Phase 2: Next.js API Routes 开发
 1. 创建 `packages/api/src/router/workflow.ts`
 2. 在 `packages/api/src/edge.ts` 中添加 `workflowRouter`
 3. 测试 API 端点

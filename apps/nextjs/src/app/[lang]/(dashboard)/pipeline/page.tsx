@@ -69,6 +69,7 @@ function PipelineContent() {
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDiscoveringCompetitors, setIsDiscoveringCompetitors] = useState(false);
+  const [isSelectingTopFive, setIsSelectingTopFive] = useState(false);
   const { toast} = useToast();
 
   // Call n8n analysis API using API Route
@@ -134,20 +135,17 @@ function PipelineContent() {
       const data = await response.json();
       setCompetitorData(data);
 
-      // Automatically extract Top 5 by confidence
-      if (data.competitors && data.competitors.length > 0) {
-        const sortedCompetitors = [...data.competitors].sort((a, b) => b.confidence - a.confidence);
-        const topFive = sortedCompetitors.slice(0, 5);
-        setTopFiveCompetitors(topFive);
-        setExpandedStages({ ...expandedStages, candidate: true, topFive: true });
-      } else {
-        setExpandedStages({ ...expandedStages, candidate: true });
-      }
-
       toast({
         title: "Competitors discovered",
         description: `Found ${data.competitors?.length || 0} potential competitors.`,
       });
+
+      // Automatically trigger Top-5 selection after competitor discovery
+      if (data.competitors && data.competitors.length > 0) {
+        await handleTopFiveSelection(input, analysis, data.competitors);
+      } else {
+        setExpandedStages({ ...expandedStages, candidate: true });
+      }
     } catch (error) {
       console.error("Competitor discovery error:", error);
       toast({
@@ -157,6 +155,74 @@ function PipelineContent() {
       });
     } finally {
       setIsDiscoveringCompetitors(false);
+    }
+  };
+
+  // Call Top-5 selection (conditional: N8N if >5, frontend if ≤5)
+  const handleTopFiveSelection = async (input: string, analysis: N8NAnalysisData, competitors: Competitor[]) => {
+    try {
+      const totalCompetitors = competitors.length;
+
+      // If 5 or fewer competitors, use simple frontend sorting
+      if (totalCompetitors <= 5) {
+        console.log(`[Top-5] Using frontend logic (${totalCompetitors} ≤ 5)`);
+        const sortedCompetitors = [...competitors].sort((a, b) => b.confidence - a.confidence);
+        setTopFiveCompetitors(sortedCompetitors);
+        setExpandedStages(prev => ({ ...prev, candidate: true, topFive: true }));
+
+        toast({
+          title: "Top 5 selected",
+          description: `Selected ${totalCompetitors} competitor${totalCompetitors > 1 ? 's' : ''} (frontend sorting)`,
+        });
+        return;
+      }
+
+      // If more than 5, use N8N AI-powered intelligent selection
+      console.log(`[Top-5] Using N8N AI selection (${totalCompetitors} > 5)`);
+      setIsSelectingTopFive(true);
+      setExpandedStages(prev => ({ ...prev, candidate: true, topFive: true }));
+
+      const response = await fetch("/api/n8n/top-five-selector", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          competitors,
+          analysisData: analysis,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      setTopFiveCompetitors(data.competitors || []);
+
+      toast({
+        title: "Top 5 intelligently selected",
+        description: data.selectionStrategy || `AI selected ${data.competitors?.length || 0} most relevant competitors.`,
+      });
+    } catch (error) {
+      console.error("Top-5 selection error:", error);
+
+      // Fallback to frontend sorting if N8N fails
+      console.warn("[Top-5] N8N failed, falling back to frontend sorting");
+      const sortedCompetitors = [...competitors]
+        .sort((a, b) => b.confidence - a.confidence)
+        .slice(0, 5);
+      setTopFiveCompetitors(sortedCompetitors);
+      setExpandedStages(prev => ({ ...prev, candidate: true, topFive: true }));
+
+      toast({
+        title: "Top 5 selected (fallback)",
+        description: "Using confidence-based sorting due to AI selection error.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSelectingTopFive(false);
     }
   };
 
@@ -434,12 +500,16 @@ function PipelineContent() {
         <AIStageCard
           title="Top-5 Selector"
           description={
-            topFiveCompetitors.length > 0
+            isSelectingTopFive
+              ? "AI selecting most relevant competitors..."
+              : topFiveCompetitors.length > 0
               ? "Review and reorder the top 5 competitors for deep analysis"
               : undefined
           }
           status={
-            topFiveCompetitors.length > 0
+            isSelectingTopFive
+              ? "running"
+              : topFiveCompetitors.length > 0
               ? "needs-approval"
               : competitorData
               ? "running"
@@ -454,7 +524,14 @@ function PipelineContent() {
             })
           }
           content={
-            topFiveCompetitors.length > 0 ? (
+            isSelectingTopFive ? (
+              <AIContentSection>
+                <AIStreamingText
+                  text="Analyzing all competitors and intelligently selecting the top 5 most relevant matches using AI..."
+                  isStreaming={true}
+                />
+              </AIContentSection>
+            ) : topFiveCompetitors.length > 0 ? (
               <AIContentSection>
                 <div className="space-y-4">
                   <p className="text-sm text-gray-600">

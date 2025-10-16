@@ -1,0 +1,696 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "feature-matrix",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "eb60001f-0e27-40f3-b5bb-c1e8f5232da4",
+      "name": "Webhook 接收竞品",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -1280,
+        1760
+      ],
+      "webhookId": "feature-matrix"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "projectId",
+              "name": "projectId",
+              "value": "={{ $json.body.projectId }}",
+              "type": "number"
+            },
+            {
+              "id": "competitors",
+              "name": "competitors",
+              "value": "={{ $json.body.topFiveCompetitors }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c4d6ae32-048b-4d10-a204-f7f2796b891a",
+      "name": "提取输入数据",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        -1056,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "3ddf381f-f437-4f28-aab8-5528934142bf",
+      "name": "循环-竞品",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -864,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 从 competitors 数组中提取当前竞品\nconst batchIndex = $input.first().json.batchIndex || 0;\nconst competitor = $input.first().json.competitors[batchIndex];\n\nreturn {\n  json: {\n    projectId: $input.first().json.projectId,\n    name: competitor.name,\n    website: competitor.website,\n    tagline: competitor.tagline || '',\n    batchIndex: batchIndex\n  }\n};"
+      },
+      "id": "ba0208fe-582b-4ba3-b8fa-db8d5416e527",
+      "name": "提取当前竞品",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.website }}/robots.txt",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "10b3aa27-6ee7-4896-beed-e8558955aa8e",
+      "name": "获取 robots.txt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -432,
+        1760
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const robotsTxt = $input.first().json.data || '';\nconst website = $input.first().json.website;\n\n// 提取 sitemap 位置\nconst sitemapMatch = robotsTxt.match(/Sitemap:\\s*(.+)/i);\nconst sitemapUrl = sitemapMatch ? sitemapMatch[1].trim() : `${website}/sitemap.xml`;\n\nreturn {\n  json: {\n    projectId: $input.item(0).json.projectId,\n    website: website,\n    name: $input.item(0).json.name,\n    tagline: $input.item(0).json.tagline,\n    sitemapUrl: sitemapUrl\n  }\n};"
+      },
+      "id": "c0e45453-2bbd-4010-9c45-00ac54005bfb",
+      "name": "解析 sitemap URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.sitemapUrl }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "9a8f9f74-42d2-44de-b318-bf34116a3b6a",
+      "name": "获取 sitemap.xml",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -32,
+        1760
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "sitemap-exists",
+              "leftValue": "={{ $json.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "626c39e6-6e48-436a-8361-48a05ca5e5c7",
+      "name": "判断 sitemap 是否存在",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        208,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "b241addb-aec4-4e8e-8395-ec014eec49a1",
+      "name": "解析 sitemap XML",
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        480,
+        1648
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const sitemapData = $input.first().json;\nconst urls = [];\n\n// 处理不同的 sitemap 格式\ntry {\n  const urlset = sitemapData.urlset?.url || [];\n  \n  if (Array.isArray(urlset)) {\n    urlset.forEach(entry => {\n      if (entry.loc) urls.push(entry.loc);\n    });\n  } else if (urlset.loc) {\n    urls.push(urlset.loc);\n  }\n} catch (e) {\n  // sitemap 解析失败\n}\n\n// 如果没有提取到 URL,使用模板\nif (urls.length === 0) {\n  const website = $input.item(0).json.website;\n  const commonPaths = ['', '/features', '/pricing', '/product', '/about', '/docs'];\n  commonPaths.forEach(path => urls.push(`${website}${path}`));\n}\n\n// 优先级排序\nconst priorityKeywords = ['pricing', 'features', 'product', 'about', 'docs'];\nconst priorityUrls = urls.filter(url => \n  priorityKeywords.some(kw => url.toLowerCase().includes(kw))\n);\nconst otherUrls = urls.filter(url => \n  !priorityKeywords.some(kw => url.toLowerCase().includes(kw))\n);\n\nconst website = $input.item(0).json.website;\nconst selectedUrls = [...new Set([\n  website,\n  ...priorityUrls.slice(0, 7),\n  ...otherUrls.slice(0, 2)\n])].slice(0, 10);\n\n// 返回多个 items,每个 item 对应一个 URL\nreturn selectedUrls.map(url => ({\n  json: {\n    projectId: $input.item(0).json.projectId,\n    website: website,\n    name: $input.item(0).json.name,\n    tagline: $input.item(0).json.tagline,\n    url: url\n  }\n}));"
+      },
+      "id": "befa405d-1b67-495f-80d1-52a80b328a3f",
+      "name": "提取页面 URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        1648
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// sitemap 不存在,生成常见路径\nconst website = $input.first().json.website;\nconst commonPaths = [\n  '',\n  '/features',\n  '/pricing',\n  '/product',\n  '/about',\n  '/docs'\n];\n\nconst urlsToScrape = commonPaths.map(path => `${website}${path}`);\n\n// 返回多个 items,每个 item 对应一个 URL\nreturn urlsToScrape.map(url => ({\n  json: {\n    projectId: $input.first().json.projectId,\n    website: website,\n    name: $input.first().json.name,\n    tagline: $input.first().json.tagline,\n    url: url\n  }\n}));"
+      },
+      "id": "10b0466f-26c1-4ccb-aa03-32e2736d3258",
+      "name": "生成模板 URLs (无 sitemap)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        1856
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://r.jina.ai/{{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Return-Format",
+              "value": "markdown"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "417eee7b-0621-4a7c-941f-8f3ecae4d7ef",
+      "name": "Jina AI 爬取",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        1584
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const jinaResponse = $input.first().json;\n\nfunction detectPageType(url) {\n  const lower = (url || '').toLowerCase();\n  if (lower.includes('pricing')) return 'pricing';\n  if (lower.includes('features') || lower.includes('product')) return 'features';\n  if (lower.includes('about')) return 'about';\n  if (lower.includes('docs')) return 'docs';\n  if (lower.endsWith('/') || lower.split('/').length <= 3) return 'homepage';\n  return 'other';\n}\n\n// Jina AI 返回格式处理\nif (jinaResponse.data && jinaResponse.data.content) {\n  return {\n    json: {\n      projectId: $input.item(0).json.projectId,\n      website: $input.item(0).json.website,\n      name: $input.item(0).json.name,\n      url: jinaResponse.data.url || $input.item(0).json.url,\n      extractedContent: {\n        title: jinaResponse.data.title || '',\n        description: jinaResponse.data.description || '',\n        markdown: jinaResponse.data.content || '',\n        contentType: detectPageType(jinaResponse.data.url),\n        wordCount: (jinaResponse.data.content || '').split(/\\s+/).length,\n        scrapeMethod: 'jina-ai',\n        tokenUsage: jinaResponse.data.usage?.tokens || 0\n      }\n    }\n  };\n}\n\n// 爬取失败\nreturn {\n  json: {\n    projectId: $input.item(0).json.projectId,\n    website: $input.item(0).json.website,\n    name: $input.item(0).json.name,\n    url: $input.item(0).json.url,\n    extractedContent: {\n      title: 'Failed to scrape',\n      markdown: '',\n      scrapeMethod: 'jina-ai-failed',\n      wordCount: 0\n    }\n  }\n};"
+      },
+      "id": "beef7804-4281-48e5-a042-43a358889a5f",
+      "name": "格式化 Jina 结果",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1968,
+        1584
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "d51b6fc1-0195-4fd9-8cee-e15968006849",
+      "name": "原生 HTTP 爬取",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1008,
+        1744
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const htmlContent = $input.first().json.data || '';\n\n// 使用正则提取关键信息\nfunction extractFromHTML(html) {\n  const result = {\n    title: '',\n    description: '',\n    h1: '',\n    bodyText: ''\n  };\n  \n  // 提取 title\n  const titleMatch = html.match(/<title[^>]*>([^<]+)<\\/title>/i);\n  if (titleMatch) result.title = titleMatch[1].trim();\n  \n  // 提取 meta description\n  const metaMatch = html.match(/<meta[^>]*name=[\"']description[\"'][^>]*content=[\"']([^\"']+)[\"']/i);\n  if (metaMatch) result.description = metaMatch[1].trim();\n  \n  // 提取 og:description\n  const ogMatch = html.match(/<meta[^>]*property=[\"']og:description[\"'][^>]*content=[\"']([^\"']+)[\"']/i);\n  if (!result.description && ogMatch) result.description = ogMatch[1].trim();\n  \n  // 提取 h1\n  const h1Match = html.match(/<h1[^>]*>([^<]+)<\\/h1>/i);\n  if (h1Match) result.h1 = h1Match[1].trim();\n  \n  // 提取 body 文本 (移除标签)\n  const bodyMatch = html.match(/<body[^>]*>([\\s\\S]*)<\\/body>/i);\n  if (bodyMatch) {\n    result.bodyText = bodyMatch[1]\n      .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n      .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n      .replace(/<[^>]+>/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n  }\n  \n  return result;\n}\n\nconst extracted = extractFromHTML(htmlContent);\nconst contentLength = extracted.bodyText.length;\nconst wordCount = extracted.bodyText.split(/\\s+/).length;\n\n// 判断是否需要 JS 渲染\nconst isSPA = \n  htmlContent.includes('<div id=\"root\"></div>') ||\n  htmlContent.includes('<div id=\"__next\"></div>') ||\n  htmlContent.includes('<div id=\"app\"></div>');\n\nconst needsJSRendering = contentLength < 200 || wordCount < 30 || isSPA;\n\nreturn {\n  json: {\n    projectId: $input.item(0).json.projectId,\n    website: $input.item(0).json.website,\n    name: $input.item(0).json.name,\n    url: $input.item(0).json.url,\n    extracted: extracted,\n    contentLength: contentLength,\n    wordCount: wordCount,\n    needsJSRendering: needsJSRendering,\n    detectedSPA: isSPA\n  }\n};"
+      },
+      "id": "1f140389-2c3e-41cf-9b8a-b4df83684072",
+      "name": "提取 HTML 内容",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        1744
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "needs-js",
+              "leftValue": "={{ $json.needsJSRendering }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "278f17f6-b1a4-43ca-8e18-67b558dde7d4",
+      "name": "判断是否需要 JS 渲染",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        1744
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function detectPageType(url) {\n  const lower = (url || '').toLowerCase();\n  if (lower.includes('pricing')) return 'pricing';\n  if (lower.includes('features')) return 'features';\n  if (lower.includes('about')) return 'about';\n  if (lower.includes('docs')) return 'docs';\n  return 'other';\n}\n\nreturn {\n  json: {\n    projectId: $input.first().json.projectId,\n    website: $input.first().json.website,\n    name: $input.first().json.name,\n    url: $input.first().json.url,\n    extractedContent: {\n      title: $input.first().json.extracted.title,\n      description: $input.first().json.extracted.description,\n      markdown: $input.first().json.extracted.bodyText,\n      contentType: detectPageType($input.first().json.url),\n      wordCount: $input.first().json.wordCount,\n      scrapeMethod: 'native-http'\n    }\n  }\n};"
+      },
+      "id": "7b5b25a0-bbd7-40be-b3af-6849c210b5d9",
+      "name": "格式化原生结果",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        1792
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $input.first().json;\nconst competitorData = $input.item(0).json;\n\n// 解析 OpenAI 返回\nlet analysisResult = { features: [], contentSummary: {} };\ntry {\n  const content = aiResponse.choices?.[0]?.message?.content || '{}';\n  analysisResult = JSON.parse(content);\n} catch (e) {\n  console.error('Failed to parse AI response:', e);\n}\n\nreturn {\n  json: {\n    projectId: competitorData.projectId,\n    name: competitorData.name,\n    website: competitorData.website,\n    tagline: competitorData.tagline,\n    pages: competitorData.pages.map(p => ({\n      url: p.url,\n      title: p.title,\n      contentType: p.contentType,\n      wordCount: p.wordCount,\n      scrapeMethod: p.scrapeMethod\n    })),\n    features: analysisResult.features || [],\n    contentSummary: {\n      ...analysisResult.contentSummary,\n      totalPagesAnalyzed: competitorData.pages.length\n    }\n  }\n};"
+      },
+      "id": "1863e9d9-211d-4cc8-8518-08b98f797ebb",
+      "name": "生成竞品画像",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        1696
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Matrix Forge completed', executionId: $execution.id, totalCompetitors: $json.totalCompetitorsAnalyzed } }}",
+        "options": {}
+      },
+      "id": "6349b808-a7d8-4f0a-a33c-9155e37d66b3",
+      "name": "返回 Webhook 响应",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -368,
+        1376
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me1",
+      "typeVersion": 1,
+      "position": [
+        2992,
+        2000
+      ],
+      "id": "b5986169-f415-45e9-8764-aa0967848bbc"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        1376
+      ],
+      "id": "7b40651a-3625-448e-8b67-4df74ebe08ea",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "jsCode": "  const systemPrompt = `## 系统角色\n你是一位经验丰富的竞品分析专家，专注于从网站内容中提取和整理商业关键信息。\n\n## 任务说明\n分析提供的网站页面内容，提取产品的核心商业信息，并以结构化的Markdown格式输出。\n\n## 输入参数（n8n变量）\n\n网站URL: url\n产品名称: product_name\n\n\n## 分析维度\n\n### 需要提取的信息\n1. 产品基本信息（名称、公司、定位）\n2. 核心功能特性（3-5个主要功能）\n3. 定价方案（套餐、价格、计费模式）\n4. 目标用户（角色、规模、行业）\n5. 营销要素（CTA、社会认证）\n6. 技术生态（集成、API、部署）\n\n## 输出格式要求\n\n请严格按照以下Markdown格式输出，不要添加额外说明：\n\n# [产品名称] 竞品分析报告\n\n## 📋 基础信息\n\n- **产品名称**：[名称]\n- **所属公司**：[公司名]\n- **产品定位**：[一句话描述产品价值]\n- **产品类型**：[SaaS/工具/平台/服务]\n- **官网地址**：[URL]\n\n## 🎯 核心功能\n\n### 功能1：[功能名称]\n- **描述**：[功能描述]\n- **使用场景**：[具体应用场景]\n- **差异优势**：[相比竞品的独特价值]\n\n### 功能2：[功能名称]\n- **描述**：[功能描述]\n- **使用场景**：[具体应用场景]\n- **差异优势**：[相比竞品的独特价值]\n\n### 功能3：[功能名称]\n- **描述**：[功能描述]\n- **使用场景**：[具体应用场景]\n- **差异优势**：[相比竞品的独特价值]\n\n## 💰 定价策略\n\n### 定价模式\n[订阅制/一次性购买/按使用量/免费增值]\n\n### 价格方案\n\n| 套餐名称 | 价格 | 计费周期 | 主要功能 | 限制条件 |\n|---------|------|---------|---------|---------|\n| [免费版] | [价格] | [周期] | [功能列表] | [限制] |\n| [基础版] | [价格] | [周期] | [功能列表] | [限制] |\n| [专业版] | [价格] | [周期] | [功能列表] | [限制] |\n| [企业版] | [价格] | [周期] | [功能列表] | [限制] |\n\n### 优惠信息\n- **免费试用**：[试用期限和条件]\n- **折扣优惠**：[年付折扣等]\n- **退款政策**：[如有]\n\n## 👥 目标用户\n\n### 用户画像\n- **主要用户群体**：[开发者/营销人员/产品经理/企业管理者]\n- **企业规模**：[个人/初创/中小企业/大企业]\n- **行业偏好**：[科技/金融/电商/教育等]\n\n### 使用场景\n1. [场景1]：[描述]\n2. [场景2]：[描述]\n3. [场景3]：[描述]\n\n### 解决痛点\n- [痛点1]：[如何解决]\n- [痛点2]：[如何解决]\n- [痛点3]：[如何解决]\n\n## 📊 营销与增长\n\n### 转化要素\n- **主要CTA**：[Get Started/Try Free/Book Demo]\n- **转化路径**：[注册流程描述]\n- **引导策略**：[产品引导方式]\n\n### 社会认证\n- **客户数量**：[数量]\n- **知名客户**：[列举3-5个]\n- **用户评价**：[有/无，主要来源]\n- **案例研究**：[有/无]\n\n### 信任背书\n- **安全认证**：[SOC2/ISO27001/GDPR等]\n- **行业奖项**：[如有]\n- **媒体报道**：[主要媒体]\n\n## 🔧 技术生态\n\n### 部署方式\n- [云端SaaS/本地部署/混合部署]\n\n### 集成能力\n- **主要集成**：[Slack/Teams/Google/Microsoft等]\n- **API支持**：[有/无，REST/GraphQL]\n- **SDK提供**：[支持的编程语言]\n- **Webhook**：[有/无]\n\n### 平台支持\n- **操作系统**：[Windows/Mac/Linux]\n- **浏览器**：[Chrome/Safari/Firefox等]\n- **移动端**：[iOS/Android]\n\n## 📝 分析总结\n\n### 竞争优势\n1. [优势1]\n2. [优势2]\n3. [优势3]\n\n### 潜在劣势\n1. [劣势1]\n2. [劣势2]\n\n### 市场定位\n[总结产品在市场中的定位和差异化策略]\n\n## ⚠️ 数据说明\n\n- **数据完整度**：[高/中/低]\n- **置信度评分**：[0-1分值]\n- **信息获取日期**：[日期]\n- **缺失信息**：\n  - [缺失项1]\n  - [缺失项2]\n- **特别说明**：[如有特殊情况需要说明]\n\n## 处理原则\n\n1. **准确性第一**\n   - 只提取页面中明确存在的信息\n   - 不确定的信息标注为\"[未找到]\"或\"[信息不详]\"\n   - 保留价格的原始币种符号\n\n2. **完整性要求**\n   - 尽可能填充所有章节\n   - 缺失的信息要在\"数据说明\"中列出\n   - 保持格式的完整性，即使某些部分信息缺失`;\n\n  const userContent = `${$input.item.json['product_name']},${$input.item.json['url']}\n  `;\n\n  return {\n    json: {\n      model: \"gpt-4o\",\n      input: [\n        {\n          role: \"system\",\n          content: systemPrompt\n        },\n        {\n          role: \"user\",\n          content: userContent\n        }\n      ]\n    }\n  };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2304,
+        1696
+      ],
+      "id": "e0aebd58-1527-4b07-aa20-7a3a9f741eba",
+      "name": "提示词转化为json"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://shuchong.xyz/v1/responses",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2496,
+        1696
+      ],
+      "id": "e614487e-6704-4436-92dd-9a488dc1c41e",
+      "name": "竞品功能分析1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Uj0VkTgessySmdcI",
+          "name": "书虫"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook 接收竞品": {
+      "main": [
+        [
+          {
+            "node": "提取输入数据",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取输入数据": {
+      "main": [
+        [
+          {
+            "node": "循环-竞品",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "循环-竞品": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "提取当前竞品",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取当前竞品": {
+      "main": [
+        [
+          {
+            "node": "获取 robots.txt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "获取 robots.txt": {
+      "main": [
+        [
+          {
+            "node": "解析 sitemap URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "解析 sitemap URL": {
+      "main": [
+        [
+          {
+            "node": "获取 sitemap.xml",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "获取 sitemap.xml": {
+      "main": [
+        [
+          {
+            "node": "判断 sitemap 是否存在",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "判断 sitemap 是否存在": {
+      "main": [
+        [
+          {
+            "node": "解析 sitemap XML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "生成模板 URLs (无 sitemap)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "解析 sitemap XML": {
+      "main": [
+        [
+          {
+            "node": "提取页面 URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取页面 URLs": {
+      "main": [
+        [
+          {
+            "node": "原生 HTTP 爬取",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "生成模板 URLs (无 sitemap)": {
+      "main": [
+        [
+          {
+            "node": "原生 HTTP 爬取",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jina AI 爬取": {
+      "main": [
+        [
+          {
+            "node": "格式化 Jina 结果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "格式化 Jina 结果": {
+      "main": [
+        [
+          {
+            "node": "提示词转化为json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "原生 HTTP 爬取": {
+      "main": [
+        [
+          {
+            "node": "提取 HTML 内容",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取 HTML 内容": {
+      "main": [
+        [
+          {
+            "node": "判断是否需要 JS 渲染",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "判断是否需要 JS 渲染": {
+      "main": [
+        [
+          {
+            "node": "Jina AI 爬取",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "格式化原生结果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "格式化原生结果": {
+      "main": [
+        [
+          {
+            "node": "提示词转化为json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "生成竞品画像": {
+      "main": [
+        [
+          {
+            "node": "Replace Me1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me1": {
+      "main": [
+        [
+          {
+            "node": "循环-竞品",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "返回 Webhook 响应",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提示词转化为json": {
+      "main": [
+        [
+          {
+            "node": "竞品功能分析1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "竞品功能分析1": {
+      "main": [
+        [
+          {
+            "node": "生成竞品画像",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "09cacf8bcc8cd23abad206b474d16f0ac6f48b701e18a2a175a8bffa2d7960ba"
+  }
+}
