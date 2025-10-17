@@ -2,6 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 用中文回答我
+所有回答都用中文
+
 ## Project Overview
 
 SignalIdea (Saasfly) is an enterprise-grade Next.js SaaS boilerplate using a Turborepo monorepo architecture with full TypeScript support.

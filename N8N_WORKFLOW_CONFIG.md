@@ -67,7 +67,9 @@ N8N_COMPETITOR_DISCOVERY_URL=http://159.203.68.208:5678/webhook/competitor-disco
 N8N_TOP_FIVE_SELECTOR_URL=http://159.203.68.208:5678/webhook/top-five-selector
 
 # 工作流 4: Matrix Forge (特征分析) - 📝 待创建
-N8N_FEATURE_MATRIX_URL=http://159.203.68.208:5678/webhook/feature-matrix
+# 注意: Matrix Forge 已拆分为两个工作流
+N8N_FEATURE_MATRIX_URL_1=http://159.203.68.208:5678/webhook/feature-matrix-1
+N8N_FEATURE_MATRIX_URL_2=http://159.203.68.208:5678/webhook/feature-matrix-2
 
 # 工作流 5: Evidence Pull (Reddit 洞察) - 📝 待创建
 N8N_EVIDENCE_PULL_URL=http://159.203.68.208:5678/webhook/reddit-insights
@@ -716,10 +718,11 @@ Response Body:
 
 ## 🔄 工作流 4: Matrix Forge (特征矩阵分析) - 优化版
 
-**Webhook Path**: `/webhook/feature-matrix`
+**Webhook Path**: `/webhook/feature-matrix-1` 和 `/webhook/feature-matrix-2`
 **Pipeline 阶段**: Stage 5 - Matrix Forge
 **状态**: 📝 待集成
 **说明**: 接收 Top 5 竞品列表,智能爬取完整站点结构并进行深度功能对比分析
+**注意**: 此工作流已拆分为两个独立的 N8N workflow
 
 **设计理念**:
 - 从竞品域名/主页开始,自动发现站点结构
