@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@acme/db";
+import { db } from "@saasfly/db";
 
 const N8N_CALLBACK_SECRET = process.env.N8N_CALLBACK_SECRET;
 

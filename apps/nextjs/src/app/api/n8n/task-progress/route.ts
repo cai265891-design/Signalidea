@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
-import { db } from "@acme/db";
+import { db } from "@saasfly/db";
 
 // Query params schema
 const QuerySchema = z.object({

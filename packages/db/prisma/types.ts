@@ -5,7 +5,12 @@ export type Generated<T> =
     : ColumnType<T, T | undefined, T>;
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
-import type { SubscriptionPlan, Status } from "./enums";
+import type {
+  SubscriptionPlan,
+  Status,
+  AnalysisStatus,
+  WorkflowType,
+} from "./enums";
 
 export type Account = {
   id: Generated<string>;
@@ -20,6 +25,21 @@ export type Account = {
   scope: string | null;
   id_token: string | null;
   session_state: string | null;
+};
+export type AsyncAnalysisTask = {
+  id: Generated<number>;
+  projectId: number;
+  authUserId: string;
+  workflowType: WorkflowType;
+  status: Generated<AnalysisStatus>;
+  inputData: unknown;
+  discoveredUrls: unknown | null;
+  result: unknown | null;
+  n8nExecutionId: string | null;
+  errorMessage: string | null;
+  createdAt: Generated<Timestamp>;
+  updatedAt: Timestamp;
+  completedAt: Timestamp | null;
 };
 export type Customer = {
   id: Generated<number>;
@@ -65,6 +85,7 @@ export type VerificationToken = {
 };
 export type DB = {
   Account: Account;
+  AsyncAnalysisTask: AsyncAnalysisTask;
   Customer: Customer;
   K8sClusterConfig: K8sClusterConfig;
   Session: Session;

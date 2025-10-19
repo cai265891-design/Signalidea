@@ -27,7 +27,8 @@
       "Bash(tee:*)",
       "Bash(vercel logs:*)",
       "Bash(vercel ls:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(bun db:push:*)"
     ],
     "deny": [],
     "ask": []
