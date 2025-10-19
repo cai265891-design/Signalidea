@@ -43,18 +43,16 @@ const InputSchema = z.object({
   }),
 });
 
-// N8N response schema - N8N returns single object or array with fixed format
+// N8N response schema - matches actual N8N output format
 const N8NCompetitorSchema = z.object({
   product_name: z.string(),
   url: z.string(),
-  description: z.string().optional(),
-  confidence: z.number().optional(),
+  description: z.string(),
+  confidence: z.number(),
 });
 
-const N8NResponseSchema = z.union([
-  N8NCompetitorSchema, // Single competitor
-  z.array(N8NCompetitorSchema), // Array of competitors
-]);
+// N8N always returns an array for Top-5 Selector
+const N8NResponseSchema = z.array(N8NCompetitorSchema);
 
 export async function POST(request: NextRequest) {
   try {
@@ -135,14 +133,17 @@ export async function POST(request: NextRequest) {
 
       const responseText = await response.text();
       console.log("[N8N Top-5 Selector] N8N raw response:", responseText);
+      console.log("[N8N Top-5 Selector] Response length:", responseText.length);
+      console.log("[N8N Top-5 Selector] Response type:", typeof responseText);
 
       // Check if response is empty
       if (!responseText || responseText.trim() === '') {
         console.error("[N8N Top-5 Selector] Empty response from N8N");
+        console.error("[N8N Top-5 Selector] Response headers:", JSON.stringify([...response.headers.entries()]));
         return NextResponse.json(
           {
             error: "N8N workflow returned empty response",
-            details: "The top-five-selector webhook may not be properly configured in N8N"
+            details: "The top-five-selector webhook may not be properly configured in N8N. Please check: 1) Workflow is activated, 2) 'Respond to Webhook' node is configured, 3) Response data format"
           },
           { status: 500 }
         );
@@ -168,16 +169,15 @@ export async function POST(request: NextRequest) {
       try {
         const validatedData = N8NResponseSchema.parse(data);
         console.log("[N8N Top-5 Selector] Validation successful");
+        console.log("[N8N Top-5 Selector] Validated competitors count:", validatedData.length);
 
         // Convert N8N format to frontend format
-        const n8nCompetitors = Array.isArray(validatedData) ? validatedData : [validatedData];
-
-        const competitors = n8nCompetitors.map((comp) => ({
+        const competitors = validatedData.map((comp) => ({
           name: comp.product_name,
-          tagline: comp.description || "",
+          tagline: comp.description,
           website: comp.url,
           lastUpdate: new Date().toISOString().split('T')[0], // Use current date
-          confidence: comp.confidence || 0.8,
+          confidence: comp.confidence,
         }));
 
         const response = {
