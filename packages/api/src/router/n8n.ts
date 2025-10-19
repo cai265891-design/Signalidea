@@ -121,7 +121,7 @@ export const n8nRouter = createTRPCRouter({
         throw new Error("N8N_WEBHOOK_DISCOVER_URL is not configured");
       }
 
-      const authUserId = ctx.session.user.id;
+      const authUserId = ctx.userId;
 
       // 调用 N8N 工作流 1
       const response = await fetch(N8N_WEBHOOK_DISCOVER_URL, {
@@ -187,7 +187,7 @@ export const n8nRouter = createTRPCRouter({
         .selectFrom("AsyncAnalysisTask")
         .selectAll()
         .where("projectId", "=", input.projectId)
-        .where("authUserId", "=", ctx.session.user.id)
+        .where("authUserId", "=", ctx.userId)
         .orderBy("createdAt", "desc")
         .execute();
 
@@ -217,7 +217,7 @@ export const n8nRouter = createTRPCRouter({
         .selectFrom("AsyncAnalysisTask")
         .selectAll()
         .where("id", "=", input.taskId)
-        .where("authUserId", "=", ctx.session.user.id)
+        .where("authUserId", "=", ctx.userId)
         .executeTakeFirst();
 
       if (!task) {

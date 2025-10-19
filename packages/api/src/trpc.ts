@@ -39,6 +39,7 @@ export const t = initTRPC.context<TRPCContext>().create({
 
 export const createTRPCRouter = t.router;
 export const procedure = t.procedure;
+export const publicProcedure = t.procedure;
 export const mergeRouters = t.mergeRouters;
 
 const isAuthed = t.middleware(({ next, ctx }) => {

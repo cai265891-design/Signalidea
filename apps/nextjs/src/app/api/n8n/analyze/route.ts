@@ -12,10 +12,10 @@ if (!N8N_WEBHOOK_URL) {
 // n8n 返回数据的类型定义 - includes all fields from Intent Clarifier
 const N8NResponseSchema = z.object({
   "Clear Requirement Statement": z.string(),
-  Certainties: z.object({
+  "Certainties": z.object({
     "Target User Profile": z.string().optional(),
     "Target Market": z.string().optional(),
-    "Must-Haves": z.array(z.string()),
+    "Must-Haves": z.array(z.string()).optional(),
     "Success Criteria": z.array(z.string()).optional(),
     "Out of Scope": z.array(z.string()).optional(),
   }),
@@ -90,14 +90,30 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const data = await response.json();
+      let data = await response.json();
       console.log("[N8N API] N8N response:", data);
+
+      // N8N returns an array, extract the first element
+      if (Array.isArray(data) && data.length > 0) {
+        data = data[0];
+        console.log("[N8N API] Extracted first element from array");
+      }
 
       // 验证返回数据结构
       try {
         const validatedData = N8NResponseSchema.parse(data);
         console.log("[N8N API] Validation successful, returning data");
-        return NextResponse.json(validatedData);
+
+        // Ensure Must-Haves exists (add empty array if missing)
+        const responseData = {
+          ...validatedData,
+          "Certainties": {
+            ...validatedData["Certainties"],
+            "Must-Haves": validatedData["Certainties"]["Must-Haves"] || [],
+          },
+        };
+
+        return NextResponse.json(responseData);
       } catch (validationError) {
         console.error("[N8N API] Validation error:", validationError);
         console.error("[N8N API] Data that failed validation:", JSON.stringify(data, null, 2));
