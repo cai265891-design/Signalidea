@@ -36,14 +36,11 @@ const InputSchema = z.object({
 
 // n8n competitor discovery response schema - matches actual N8N output
 const N8NCompetitorSchema = z.object({
-  name: z.string(),
-  category: z.string().optional(),
-  platform: z.array(z.string()).optional(),
-  primary_job: z.string().optional(),
-  target_user: z.string().optional(),
-  evidence: z.object({
-    homepage: z.string().optional(),
-  }).optional(),
+  product_name: z.string(),
+  company: z.string().optional(),
+  url: z.string(),
+  description: z.string().optional(),
+  match_reason: z.string().optional(),
   confidence: z.number(),
 });
 
@@ -170,9 +167,9 @@ export async function POST(request: NextRequest) {
 
         // Transform N8N format to frontend format
         const competitors = rawCompetitors.map(comp => ({
-          name: comp.name,
-          tagline: comp.primary_job || comp.category || "No description available",
-          website: comp.evidence?.homepage || "",
+          name: comp.product_name,
+          tagline: comp.description || comp.match_reason || "No description available",
+          website: comp.url,
           lastUpdate: new Date().toISOString().split('T')[0], // Use current date as placeholder
           confidence: comp.confidence,
         }));
