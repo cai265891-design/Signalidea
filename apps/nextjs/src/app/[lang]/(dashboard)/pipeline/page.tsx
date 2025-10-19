@@ -320,28 +320,6 @@ function PipelineContent() {
                     </p>
                   </div>
 
-                  {/* Certainties */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                      Certainties
-                    </h3>
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-xs font-medium text-gray-600 mb-1.5">Must-Haves:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {analysisData.Certainties["Must-Haves"].map((item, idx) => (
-                            <span
-                              key={idx}
-                              className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20"
-                            >
-                              {item}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Key Assumptions */}
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900 mb-2">
