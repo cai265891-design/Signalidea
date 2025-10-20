@@ -17,7 +17,7 @@ import { cn } from "@saasfly/ui";
 interface AIStageCardProps {
   title: string;
   description?: string;
-  status: "pending" | "running" | "completed" | "active";
+  status: "pending" | "running" | "completed" | "active" | "needs-approval";
   content?: React.ReactNode;
   badge?: string;
   isExpanded?: boolean;
@@ -49,6 +49,7 @@ export function AIStageCard({
     running: Loader2,
     completed: CheckCircle2,
     active: Sparkles,
+    "needs-approval": CheckCircle2,
   }[status];
 
   const statusColors = {
@@ -56,6 +57,7 @@ export function AIStageCard({
     running: "text-blue-600 animate-spin",
     completed: "text-green-600",
     active: "text-purple-600",
+    "needs-approval": "text-amber-600",
   };
 
   return (
@@ -64,7 +66,8 @@ export function AIStageCard({
       status === "pending" && "border-l-gray-300 bg-gray-50/50",
       status === "running" && "border-l-blue-500 bg-blue-50/30",
       status === "completed" && "border-l-green-500 bg-white",
-      status === "active" && "border-l-purple-500 bg-purple-50/30"
+      status === "active" && "border-l-purple-500 bg-purple-50/30",
+      status === "needs-approval" && "border-l-amber-500 bg-amber-50/30"
     )}>
       <div
         className="flex items-start justify-between p-6 cursor-pointer"

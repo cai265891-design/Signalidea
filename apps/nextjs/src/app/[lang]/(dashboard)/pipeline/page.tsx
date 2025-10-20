@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
@@ -72,8 +72,11 @@ function PipelineContent() {
   const [isSelectingTopFive, setIsSelectingTopFive] = useState(false);
   const { toast} = useToast();
 
+  // Forward declarations for mutual dependencies
+  const handleTopFiveSelectionRef = useRef<((input: string, analysis: N8NAnalysisData, competitors: Competitor[]) => Promise<void>) | null>(null);
+
   // Call n8n analysis API using API Route
-  const handleAnalyze = async (input: string) => {
+  const handleAnalyze = useCallback(async (input: string) => {
     try {
       setIsAnalyzing(true);
 
@@ -92,6 +95,10 @@ function PipelineContent() {
 
       const data = await response.json();
       setAnalysisData(data);
+
+      // Update UI immediately
+      setExpandedStages(prev => ({ ...prev, intent: true, candidate: false }));
+
       toast({
         title: "Analysis completed",
         description: "Requirement analysis has been completed successfully.",
@@ -109,12 +116,14 @@ function PipelineContent() {
     } finally {
       setIsAnalyzing(false);
     }
-  };
+  }, [toast]);
 
   // Call n8n competitor discovery API
-  const handleCompetitorDiscovery = async (input: string, analysis: N8NAnalysisData) => {
+  const handleCompetitorDiscovery = useCallback(async (input: string, analysis: N8NAnalysisData) => {
     try {
       setIsDiscoveringCompetitors(true);
+      // Expand candidate stage immediately to show progress
+      setExpandedStages(prev => ({ ...prev, candidate: true }));
 
       const response = await fetch("/api/n8n/competitor-discovery", {
         method: "POST",
@@ -141,10 +150,8 @@ function PipelineContent() {
       });
 
       // Automatically trigger Top-5 selection after competitor discovery
-      if (data.competitors && data.competitors.length > 0) {
-        await handleTopFiveSelection(input, analysis, data.competitors);
-      } else {
-        setExpandedStages({ ...expandedStages, candidate: true });
+      if (data.competitors && data.competitors.length > 0 && handleTopFiveSelectionRef.current) {
+        await handleTopFiveSelectionRef.current(input, analysis, data.competitors);
       }
     } catch (error) {
       console.error("Competitor discovery error:", error);
@@ -156,19 +163,22 @@ function PipelineContent() {
     } finally {
       setIsDiscoveringCompetitors(false);
     }
-  };
+  }, [toast]);
 
   // Call Top-5 selection (conditional: N8N if >5, frontend if ≤5)
-  const handleTopFiveSelection = async (input: string, analysis: N8NAnalysisData, competitors: Competitor[]) => {
+  const handleTopFiveSelection = useCallback(async (input: string, analysis: N8NAnalysisData, competitors: Competitor[]) => {
+    console.log('[Top-5] Starting selection process');
     try {
       const totalCompetitors = competitors.length;
+
+      // Expand top-five stage immediately
+      setExpandedStages(prev => ({ ...prev, candidate: true, topFive: true }));
 
       // If 5 or fewer competitors, use simple frontend sorting
       if (totalCompetitors <= 5) {
         console.log(`[Top-5] Using frontend logic (${totalCompetitors} ≤ 5)`);
         const sortedCompetitors = [...competitors].sort((a, b) => b.confidence - a.confidence);
         setTopFiveCompetitors(sortedCompetitors);
-        setExpandedStages(prev => ({ ...prev, candidate: true, topFive: true }));
 
         toast({
           title: "Top 5 selected",
@@ -180,7 +190,6 @@ function PipelineContent() {
       // If more than 5, use N8N AI-powered intelligent selection
       console.log(`[Top-5] Using N8N AI selection (${totalCompetitors} > 5)`);
       setIsSelectingTopFive(true);
-      setExpandedStages(prev => ({ ...prev, candidate: true, topFive: true }));
 
       const response = await fetch("/api/n8n/top-five-selector", {
         method: "POST",
@@ -214,7 +223,6 @@ function PipelineContent() {
         .sort((a, b) => b.confidence - a.confidence)
         .slice(0, 5);
       setTopFiveCompetitors(sortedCompetitors);
-      setExpandedStages(prev => ({ ...prev, candidate: true, topFive: true }));
 
       toast({
         title: "Top 5 selected (fallback)",
@@ -224,25 +232,30 @@ function PipelineContent() {
     } finally {
       setIsSelectingTopFive(false);
     }
-  };
+  }, [toast]);
+
+  // Store ref for handleTopFiveSelection
+  useEffect(() => {
+    handleTopFiveSelectionRef.current = handleTopFiveSelection;
+  }, [handleTopFiveSelection]);
 
   // Handle Top-5 reordering
-  const handleTopFiveReorder = (reorderedCompetitors: Competitor[]) => {
+  const handleTopFiveReorder = useCallback((reorderedCompetitors: Competitor[]) => {
     setTopFiveCompetitors(reorderedCompetitors);
-  };
+  }, []);
 
   // Handle Top-5 replacement
-  const handleTopFiveReplace = (id: string) => {
+  const handleTopFiveReplace = useCallback((id: string) => {
     // Find remaining competitors not in top 5
     const topFiveNames = new Set(topFiveCompetitors.map(c => c.name));
     const remainingCompetitors = competitorData?.competitors.filter(
       c => !topFiveNames.has(c.name)
     ) || [];
 
-    if (remainingCompetitors.length > 0) {
+    if (remainingCompetitors.length > 0 && remainingCompetitors[0]) {
       // Replace the competitor with the next best alternative
       const newTopFive = topFiveCompetitors.map((c) =>
-        c.name === id ? remainingCompetitors[0] : c
+        c.name === id ? remainingCompetitors[0]! : c
       );
       setTopFiveCompetitors(newTopFive);
       toast({
@@ -250,16 +263,33 @@ function PipelineContent() {
         description: `Replaced with ${remainingCompetitors[0].name}`,
       });
     }
-  };
+  }, [topFiveCompetitors, competitorData, toast]);
 
   // Handle Top-5 approval
-  const handleTopFiveApprove = () => {
+  const handleTopFiveApprove = useCallback(() => {
     toast({
       title: "Top 5 approved",
       description: "Ready for deep analysis. (Next stages coming soon!)",
     });
     // TODO: Trigger next stage (Evidence Pull)
-  };
+  }, [toast]);
+
+  // Memoize computed values to avoid recalculation on every render
+  const competitorCount = useMemo(() => competitorData?.competitors?.length || 0, [competitorData]);
+  const topFiveCount = useMemo(() => topFiveCompetitors.length, [topFiveCompetitors]);
+
+  // Memoize stage toggle handlers
+  const toggleIntentStage = useCallback(() => {
+    setExpandedStages(prev => ({ ...prev, intent: !prev.intent }));
+  }, []);
+
+  const toggleCandidateStage = useCallback(() => {
+    setExpandedStages(prev => ({ ...prev, candidate: !prev.candidate }));
+  }, []);
+
+  const toggleTopFiveStage = useCallback(() => {
+    setExpandedStages(prev => ({ ...prev, topFive: !prev.topFive }));
+  }, []);
 
   // Auto-trigger analysis when query is provided from URL
   useEffect(() => {
@@ -275,14 +305,14 @@ function PipelineContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryFromUrl]);
 
-  const handleNewAction = () => {
+  const handleNewAction = useCallback(() => {
     toast({
       title: "Starting new analysis",
       description: "Your pipeline will begin processing shortly.",
     });
     // 调用 n8n 分析
     handleAnalyze(userInput);
-  };
+  }, [toast, handleAnalyze, userInput]);
 
   return (
     <AIPipelineLayout
@@ -298,9 +328,7 @@ function PipelineContent() {
           badge="Free"
           description={isAnalyzing ? "Analyzing requirement..." : undefined}
           isExpanded={expandedStages.intent}
-          onToggle={() =>
-            setExpandedStages({ ...expandedStages, intent: !expandedStages.intent })
-          }
+          onToggle={toggleIntentStage}
           content={
             <AIContentSection>
               {isAnalyzing ? (
@@ -318,6 +346,84 @@ function PipelineContent() {
                     <p className="text-sm text-gray-700 leading-relaxed">
                       {analysisData["Clear Requirement Statement"]}
                     </p>
+                  </div>
+
+                  {/* Certainties Section */}
+                  <div className="space-y-4">
+                    {/* Target User Profile */}
+                    {analysisData.Certainties["Target User Profile"] && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                          Target User Profile
+                        </h3>
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          {analysisData.Certainties["Target User Profile"]}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Target Market */}
+                    {analysisData.Certainties["Target Market"] && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                          Target Market
+                        </h3>
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          {analysisData.Certainties["Target Market"]}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Must-Haves */}
+                    {analysisData.Certainties["Must-Haves"] && analysisData.Certainties["Must-Haves"].length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                          Must-Haves
+                        </h3>
+                        <ul className="space-y-1.5">
+                          {analysisData.Certainties["Must-Haves"].map((item, idx) => (
+                            <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                              <span className="text-green-600 mt-0.5">✓</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Success Criteria */}
+                    {analysisData.Certainties["Success Criteria"] && analysisData.Certainties["Success Criteria"].length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                          Success Criteria
+                        </h3>
+                        <ul className="space-y-1.5">
+                          {analysisData.Certainties["Success Criteria"].map((item, idx) => (
+                            <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                              <span className="text-blue-600 mt-0.5">→</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Out of Scope */}
+                    {analysisData.Certainties["Out of Scope"] && analysisData.Certainties["Out of Scope"].length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                          Out of Scope
+                        </h3>
+                        <ul className="space-y-1.5">
+                          {analysisData.Certainties["Out of Scope"].map((item, idx) => (
+                            <li key={idx} className="text-sm text-gray-500 flex items-start gap-2">
+                              <span className="text-gray-400 mt-0.5">✕</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
 
                   {/* Key Assumptions */}
@@ -377,12 +483,7 @@ function PipelineContent() {
           }
           badge="Free"
           isExpanded={expandedStages.candidate}
-          onToggle={() =>
-            setExpandedStages({
-              ...expandedStages,
-              candidate: !expandedStages.candidate,
-            })
-          }
+          onToggle={toggleCandidateStage}
           content={
             isDiscoveringCompetitors ? (
               <AIContentSection>
@@ -495,12 +596,7 @@ function PipelineContent() {
           }
           badge="Free"
           isExpanded={expandedStages.topFive}
-          onToggle={() =>
-            setExpandedStages({
-              ...expandedStages,
-              topFive: !expandedStages.topFive,
-            })
-          }
+          onToggle={toggleTopFiveStage}
           content={
             isSelectingTopFive ? (
               <AIContentSection>

@@ -100,10 +100,12 @@ export async function POST(request: NextRequest) {
     };
 
     if (N8N_API_KEY) {
-      headers["Authorization"] = `Bearer ${N8N_API_KEY}`;
+      // N8N uses X-N8N-API-KEY header for authentication
+      headers["X-N8N-API-KEY"] = N8N_API_KEY;
     }
 
     console.log("[N8N Top-5 Selector] Calling webhook:", N8N_WEBHOOK_URL);
+    console.log("[N8N Top-5 Selector] Using API Key auth:", !!N8N_API_KEY);
     console.log("[N8N Top-5 Selector] Payload:", JSON.stringify(payload, null, 2));
 
     // Add timeout to prevent hanging
@@ -135,6 +137,18 @@ export async function POST(request: NextRequest) {
       console.log("[N8N Top-5 Selector] N8N raw response:", responseText);
       console.log("[N8N Top-5 Selector] Response length:", responseText.length);
       console.log("[N8N Top-5 Selector] Response type:", typeof responseText);
+
+      // Check for authentication errors
+      if (responseText.includes("Authorization data is wrong") || responseText.includes("Unauthorized")) {
+        console.error("[N8N Top-5 Selector] Authentication failed");
+        return NextResponse.json(
+          {
+            error: "N8N authentication failed",
+            details: "N8N_API_KEY is missing or incorrect. Please check: 1) N8N_API_KEY environment variable is set, 2) API key is valid in N8N settings, 3) Webhook has correct authentication settings"
+          },
+          { status: 401 }
+        );
+      }
 
       // Check if response is empty
       if (!responseText || responseText.trim() === '') {

@@ -62,10 +62,12 @@ export async function POST(request: NextRequest) {
 
     // Add authentication header if API key is configured
     if (N8N_API_KEY) {
-      headers["Authorization"] = `Bearer ${N8N_API_KEY}`;
+      // N8N uses X-N8N-API-KEY header for authentication
+      headers["X-N8N-API-KEY"] = N8N_API_KEY;
     }
 
     console.log("Calling N8N webhook:", N8N_WEBHOOK_URL);
+    console.log("Using API Key auth:", !!N8N_API_KEY);
     console.log("Request payload:", { input });
 
     // Add timeout to prevent hanging
@@ -84,13 +86,48 @@ export async function POST(request: NextRequest) {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("n8n webhook error:", errorText);
+
+        // Check for authentication errors
+        if (errorText.includes("Authorization data is wrong") || errorText.includes("Unauthorized")) {
+          return NextResponse.json(
+            {
+              error: "N8N authentication failed",
+              details: "N8N_API_KEY is missing or incorrect. Please check N8N settings."
+            },
+            { status: 401 }
+          );
+        }
+
         return NextResponse.json(
           { error: `n8n webhook failed: ${response.status} ${response.statusText}`, details: errorText },
           { status: response.status }
         );
       }
 
-      let data = await response.json();
+      const responseText = await response.text();
+      console.log("[N8N API] Raw response:", responseText);
+
+      // Check for authentication errors in 200 responses
+      if (responseText.includes("Authorization data is wrong") || responseText.includes("Unauthorized")) {
+        return NextResponse.json(
+          {
+            error: "N8N authentication failed",
+            details: "N8N_API_KEY is missing or incorrect. Please check N8N settings."
+          },
+          { status: 401 }
+        );
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("[N8N API] Failed to parse response:", parseError);
+        return NextResponse.json(
+          { error: "Invalid JSON response from N8N", details: responseText.substring(0, 500) },
+          { status: 500 }
+        );
+      }
       console.log("[N8N API] N8N response:", data);
 
       // N8N returns an array, extract the first element

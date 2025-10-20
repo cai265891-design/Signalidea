@@ -95,10 +95,12 @@ export async function POST(request: NextRequest) {
     };
 
     if (N8N_API_KEY) {
-      headers["Authorization"] = `Bearer ${N8N_API_KEY}`;
+      // N8N uses X-N8N-API-KEY header for authentication
+      headers["X-N8N-API-KEY"] = N8N_API_KEY;
     }
 
     console.log("[N8N Competitor Discovery] Calling webhook:", N8N_WEBHOOK_URL);
+    console.log("[N8N Competitor Discovery] Using API Key auth:", !!N8N_API_KEY);
     console.log("[N8N Competitor Discovery] Payload:", JSON.stringify(payload, null, 2));
 
     // Add timeout to prevent hanging
@@ -128,6 +130,18 @@ export async function POST(request: NextRequest) {
 
       const responseText = await response.text();
       console.log("[N8N Competitor Discovery] N8N raw response:", responseText);
+
+      // Check for authentication errors
+      if (responseText.includes("Authorization data is wrong") || responseText.includes("Unauthorized")) {
+        console.error("[N8N Competitor Discovery] Authentication failed");
+        return NextResponse.json(
+          {
+            error: "N8N authentication failed",
+            details: "N8N_API_KEY is missing or incorrect. Please check N8N settings."
+          },
+          { status: 401 }
+        );
+      }
 
       // Check if response is empty
       if (!responseText || responseText.trim() === '') {

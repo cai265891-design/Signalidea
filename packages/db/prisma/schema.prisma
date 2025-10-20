@@ -110,8 +110,11 @@ enum AnalysisStatus {
 }
 
 enum WorkflowType {
-  FEATURE_MATRIX  // 竞品功能矩阵
-  REDDIT_SEARCH   // Reddit 搜索
+  FEATURE_MATRIX      // 竞品功能矩阵
+  REDDIT_SEARCH       // Reddit 搜索
+  INTENT_CLARIFIER    // 需求分析
+  COMPETITOR_DISCOVERY // 竞品发现
+  TOP_FIVE_SELECTOR   // Top-5 筛选
 }
 
 // 通用的异步任务表 - 支持竞品分析、Reddit 搜索等
@@ -142,4 +145,34 @@ model AsyncAnalysisTask {
   @@index([projectId])
   @@index([authUserId])
   @@index([status])
+}
+
+// Pipeline 任务管理表 - 管理整个 Pipeline 的生命周期
+model PipelineJob {
+  id          Int            @id @default(autoincrement())
+  authUserId  String         // 用户 ID
+  userInput   String         @db.Text // 用户原始输入
+  status      AnalysisStatus @default(PENDING)
+
+  // 关联的子任务 ID
+  intentTaskId       Int?    // Intent Clarifier 任务
+  competitorTaskId   Int?    // Competitor Discovery 任务
+  topFiveTaskId      Int?    // Top-5 Selector 任务
+
+  // 结果缓存 (避免重复查询)
+  intentResult       Json?   // Intent Clarifier 结果
+  competitorResult   Json?   // Competitor Discovery 结果
+  topFiveResult      Json?   // Top-5 Selector 结果
+
+  // 进度追踪
+  currentStage       String? // 当前执行阶段
+  errorMessage       String? @db.Text // 错误信息
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  completedAt DateTime? // 完成时间
+
+  @@index([authUserId])
+  @@index([status])
+  @@index([createdAt])
 }
