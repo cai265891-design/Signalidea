@@ -95,8 +95,8 @@ export async function POST(request: NextRequest) {
     };
 
     if (N8N_API_KEY) {
-      // N8N uses X-N8N-API-KEY header for authentication
-      headers["X-N8N-API-KEY"] = N8N_API_KEY;
+      // N8N webhook uses Authorization: Bearer <token>
+      headers["Authorization"] = `Bearer ${N8N_API_KEY}`;
     }
 
     console.log("[N8N Competitor Discovery] Calling webhook:", N8N_WEBHOOK_URL);

@@ -257,7 +257,7 @@ async function triggerCompetitorDiscovery(pipelineJob: any, intentResult: any) {
     "Content-Type": "application/json",
   };
   if (N8N_API_KEY) {
-    headers["X-N8N-API-KEY"] = N8N_API_KEY;
+    headers["Authorization"] = `Bearer ${N8N_API_KEY}`;
   }
 
   const payload = {
@@ -319,7 +319,7 @@ async function triggerTopFiveSelector(pipelineJob: any, competitors: any[], inte
     "Content-Type": "application/json",
   };
   if (N8N_API_KEY) {
-    headers["X-N8N-API-KEY"] = N8N_API_KEY;
+    headers["Authorization"] = `Bearer ${N8N_API_KEY}`;
   }
 
   const payload = {

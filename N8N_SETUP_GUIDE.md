@@ -33,7 +33,7 @@ N8N_API_KEY=your_actual_api_key_here
 ```
 
 **重要:**
-- N8N 使用 `X-N8N-API-KEY` HTTP header 进行认证,而不是 `Authorization: Bearer`
+- N8N Webhook 使用 `Authorization: Bearer {API_KEY}` HTTP header 进行认证
 - 代码已经更新为使用正确的认证方式
 
 ### 3. N8N Webhook 配置
@@ -41,9 +41,9 @@ N8N_API_KEY=your_actual_api_key_here
 在你的 N8N workflow 中:
 
 1. **Webhook 节点配置:**
-   - Authentication: API Key Auth
-   - API Key: 使用你在 Settings 中创建的 key
-   - Header Name: `X-N8N-API-KEY`
+   - Authentication: Header Auth
+   - Header Name: `Authorization`
+   - Header Value: `Bearer {{$env.N8N_API_KEY}}`
 
 2. **Respond to Webhook 节点:**
    - 确保 workflow 末尾有 "Respond to Webhook" 节点
@@ -90,7 +90,7 @@ N8N webhook 必须返回以下格式的数组:
 ```bash
 curl -X POST http://your-n8n-instance:5678/webhook/top-five-selector \
   -H "Content-Type: application/json" \
-  -H "X-N8N-API-KEY: your_api_key_here" \
+  -H "Authorization: Bearer your_api_key_here" \
   -d '{
     "competitors": [...],
     "requirementStatement": "Test",

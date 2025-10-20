@@ -157,7 +157,7 @@ async function triggerN8NAnalysis(taskId: number, userInput: string): Promise<vo
   };
 
   if (N8N_API_KEY) {
-    headers["X-N8N-API-KEY"] = N8N_API_KEY;
+    headers["Authorization"] = `Bearer ${N8N_API_KEY}`;
   }
 
   const response = await fetch(N8N_WEBHOOK_URL!, {
