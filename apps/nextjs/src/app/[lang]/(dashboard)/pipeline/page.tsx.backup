@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect, Suspense, useCallback, useMemo } from "react";
+import { useState, useEffect, Suspense, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { AIPipelineLayout } from "~/components/pipeline/ai-pipeline-layout";
 import { AIStageCard } from "~/components/pipeline/ai-stage-card";
 import { AIContentSection, AINumberedList, AIStreamingText } from "~/components/pipeline/ai-content-section";
 import { useToast } from "@saasfly/ui/use-toast";
-import { usePipelinePolling, recoverPipelineJob } from "~/hooks/usePipelinePolling";
-import type { PipelineJobStatus } from "~/types/pipeline";
 
 const mockHistory = [
   {
@@ -65,76 +63,207 @@ function PipelineContent() {
     topFive: false,
   });
   const [userInput, setUserInput] = useState("I want to build an AI image product");
-  const [jobId, setJobId] = useState<number | null>(null);
+  const [analysisData, setAnalysisData] = useState<N8NAnalysisData | null>(null);
+  const [competitorData, setCompetitorData] = useState<CompetitorDiscoveryData | null>(null);
+  const [topFiveCompetitors, setTopFiveCompetitors] = useState<Competitor[]>([]);
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
-  const { toast } = useToast();
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isDiscoveringCompetitors, setIsDiscoveringCompetitors] = useState(false);
+  const [isSelectingTopFive, setIsSelectingTopFive] = useState(false);
+  const { toast} = useToast();
 
-  // Use polling hook to get pipeline status
-  const { status, isLoading, error, refresh } = usePipelinePolling({
-    jobId,
-    enabled: !!jobId,
-    onComplete: (finalStatus) => {
-      toast({
-        title: "Pipeline 完成!",
-        description: "所有分析阶段已完成",
-      });
-    },
-    onError: (err) => {
-      toast({
-        title: "Pipeline 错误",
-        description: err.message,
-        variant: "destructive",
-      });
-    },
-  });
+  // Forward declarations for mutual dependencies
+  const handleTopFiveSelectionRef = useRef<((input: string, analysis: N8NAnalysisData, competitors: Competitor[]) => Promise<void>) | null>(null);
 
-  // Extract data from pipeline status
-  const analysisData = status?.intentResult;
-  const competitorData = status?.competitorResult;
-  const topFiveCompetitors = status?.topFiveResult?.competitors || [];
-
-  // Extract loading states from pipeline status
-  const isAnalyzing = status?.intentTask?.status === "PROCESSING";
-  const isDiscoveringCompetitors = status?.competitorTask?.status === "PROCESSING";
-  const isSelectingTopFive = status?.topFiveTask?.status === "PROCESSING";
-
-  // Start pipeline using new async API
-  const handleNewAction = useCallback(async () => {
+  // Call n8n analysis API using API Route
+  const handleAnalyze = useCallback(async (input: string) => {
     try {
-      toast({
-        title: "启动 Pipeline",
-        description: "正在启动分析流程...",
-      });
+      setIsAnalyzing(true);
 
-      const response = await fetch("/api/pipeline/start", {
+      const response = await fetch("/api/n8n/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ userInput }),
+        body: JSON.stringify({ input }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to start pipeline: ${response.status}`);
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      const { jobId: newJobId } = await response.json();
-      setJobId(newJobId);
+      const data = await response.json();
+      setAnalysisData(data);
+
+      // Update UI immediately
+      setExpandedStages(prev => ({ ...prev, intent: true, candidate: false }));
 
       toast({
-        title: "Pipeline 已启动",
-        description: "正在处理中,请稍候...",
+        title: "Analysis completed",
+        description: "Requirement analysis has been completed successfully.",
       });
+
+      // Automatically trigger competitor discovery after analysis completes
+      await handleCompetitorDiscovery(input, data);
     } catch (error) {
-      console.error("Failed to start pipeline:", error);
+      console.error("Analysis error:", error);
       toast({
-        title: "启动失败",
+        title: "Analysis failed",
         description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
+    } finally {
+      setIsAnalyzing(false);
     }
-  }, [userInput, toast]);
+  }, [toast]);
+
+  // Call n8n competitor discovery API
+  const handleCompetitorDiscovery = useCallback(async (input: string, analysis: N8NAnalysisData) => {
+    try {
+      setIsDiscoveringCompetitors(true);
+      // Expand candidate stage immediately to show progress
+      setExpandedStages(prev => ({ ...prev, candidate: true }));
+
+      const response = await fetch("/api/n8n/competitor-discovery", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userInput: input,
+          analysisData: analysis,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      setCompetitorData(data);
+
+      toast({
+        title: "Competitors discovered",
+        description: `Found ${data.competitors?.length || 0} potential competitors.`,
+      });
+
+      // Automatically trigger Top-5 selection after competitor discovery
+      if (data.competitors && data.competitors.length > 0 && handleTopFiveSelectionRef.current) {
+        await handleTopFiveSelectionRef.current(input, analysis, data.competitors);
+      }
+    } catch (error) {
+      console.error("Competitor discovery error:", error);
+      toast({
+        title: "Competitor discovery failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDiscoveringCompetitors(false);
+    }
+  }, [toast]);
+
+  // Call Top-5 selection (conditional: N8N if >5, frontend if ≤5)
+  const handleTopFiveSelection = useCallback(async (input: string, analysis: N8NAnalysisData, competitors: Competitor[]) => {
+    console.log('[Top-5] Starting selection process');
+    try {
+      const totalCompetitors = competitors.length;
+
+      // Expand top-five stage immediately
+      setExpandedStages(prev => ({ ...prev, candidate: true, topFive: true }));
+
+      // If 5 or fewer competitors, use simple frontend sorting
+      if (totalCompetitors <= 5) {
+        console.log(`[Top-5] Using frontend logic (${totalCompetitors} ≤ 5)`);
+        const sortedCompetitors = [...competitors].sort((a, b) => b.confidence - a.confidence);
+        setTopFiveCompetitors(sortedCompetitors);
+
+        toast({
+          title: "Top 5 selected",
+          description: `Selected ${totalCompetitors} competitor${totalCompetitors > 1 ? 's' : ''} (frontend sorting)`,
+        });
+        return;
+      }
+
+      // If more than 5, use N8N AI-powered intelligent selection
+      console.log(`[Top-5] Using N8N AI selection (${totalCompetitors} > 5)`);
+      setIsSelectingTopFive(true);
+
+      const response = await fetch("/api/n8n/top-five-selector", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          competitors,
+          analysisData: analysis,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      setTopFiveCompetitors(data.competitors || []);
+
+      toast({
+        title: "Top 5 intelligently selected",
+        description: data.selectionStrategy || `AI selected ${data.competitors?.length || 0} most relevant competitors.`,
+      });
+    } catch (error) {
+      console.error("Top-5 selection error:", error);
+
+      // Fallback to frontend sorting if N8N fails
+      console.warn("[Top-5] N8N failed, falling back to frontend sorting");
+      const sortedCompetitors = [...competitors]
+        .sort((a, b) => b.confidence - a.confidence)
+        .slice(0, 5);
+      setTopFiveCompetitors(sortedCompetitors);
+
+      toast({
+        title: "Top 5 selected (fallback)",
+        description: "Using confidence-based sorting due to AI selection error.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSelectingTopFive(false);
+    }
+  }, [toast]);
+
+  // Store ref for handleTopFiveSelection
+  useEffect(() => {
+    handleTopFiveSelectionRef.current = handleTopFiveSelection;
+  }, [handleTopFiveSelection]);
+
+  // Handle Top-5 reordering
+  const handleTopFiveReorder = useCallback((reorderedCompetitors: Competitor[]) => {
+    setTopFiveCompetitors(reorderedCompetitors);
+  }, []);
+
+  // Handle Top-5 replacement
+  const handleTopFiveReplace = useCallback((id: string) => {
+    // Find remaining competitors not in top 5
+    const topFiveNames = new Set(topFiveCompetitors.map(c => c.name));
+    const remainingCompetitors = competitorData?.competitors.filter(
+      c => !topFiveNames.has(c.name)
+    ) || [];
+
+    if (remainingCompetitors.length > 0 && remainingCompetitors[0]) {
+      // Replace the competitor with the next best alternative
+      const newTopFive = topFiveCompetitors.map((c) =>
+        c.name === id ? remainingCompetitors[0]! : c
+      );
+      setTopFiveCompetitors(newTopFive);
+      toast({
+        title: "Competitor replaced",
+        description: `Replaced with ${remainingCompetitors[0].name}`,
+      });
+    }
+  }, [topFiveCompetitors, competitorData, toast]);
 
   // Handle Top-5 approval
   const handleTopFiveApprove = useCallback(() => {
@@ -144,6 +273,10 @@ function PipelineContent() {
     });
     // TODO: Trigger next stage (Evidence Pull)
   }, [toast]);
+
+  // Memoize computed values to avoid recalculation on every render
+  const competitorCount = useMemo(() => competitorData?.competitors?.length || 0, [competitorData]);
+  const topFiveCount = useMemo(() => topFiveCompetitors.length, [topFiveCompetitors]);
 
   // Memoize stage toggle handlers
   const toggleIntentStage = useCallback(() => {
@@ -158,61 +291,28 @@ function PipelineContent() {
     setExpandedStages(prev => ({ ...prev, topFive: !prev.topFive }));
   }, []);
 
-  // Recover pipeline state on mount
-  useEffect(() => {
-    const recoveredJobId = recoverPipelineJob();
-    if (recoveredJobId) {
-      setJobId(recoveredJobId);
-      toast({
-        title: "恢复 Pipeline",
-        description: "已恢复上次的分析进度",
-      });
-    }
-  }, [toast]);
-
-  // Auto-expand stages as they complete
-  useEffect(() => {
-    if (!status) return;
-
-    setExpandedStages((prev) => {
-      const newExpanded = { ...prev };
-
-      // Intent Clarifier: expand when completed
-      if (status.intentTask?.status === "COMPLETED" && !prev.intent) {
-        newExpanded.intent = true;
-      }
-
-      // Candidate Finder: expand when processing or completed
-      if (
-        (status.competitorTask?.status === "PROCESSING" ||
-          status.competitorTask?.status === "COMPLETED") &&
-        !prev.candidate
-      ) {
-        newExpanded.candidate = true;
-      }
-
-      // Top-5 Selector: expand when processing or completed
-      if (
-        (status.topFiveTask?.status === "PROCESSING" ||
-          status.topFiveTask?.status === "COMPLETED") &&
-        !prev.topFive
-      ) {
-        newExpanded.topFive = true;
-      }
-
-      return newExpanded;
-    });
-  }, [status]);
-
   // Auto-trigger analysis when query is provided from URL
   useEffect(() => {
     if (queryFromUrl && !hasAutoTriggered) {
       setHasAutoTriggered(true);
       setUserInput(queryFromUrl);
-      handleNewAction();
+      toast({
+        title: "Starting analysis",
+        description: "Your pipeline will begin processing shortly.",
+      });
+      handleAnalyze(queryFromUrl);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryFromUrl]);
+
+  const handleNewAction = useCallback(() => {
+    toast({
+      title: "Starting new analysis",
+      description: "Your pipeline will begin processing shortly.",
+    });
+    // 调用 n8n 分析
+    handleAnalyze(userInput);
+  }, [toast, handleAnalyze, userInput]);
 
   return (
     <AIPipelineLayout
